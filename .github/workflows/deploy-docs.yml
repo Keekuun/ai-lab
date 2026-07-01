@@ -1,0 +1,52 @@
+name: deploy-docs
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build VitePress site
+        run: pnpm docs:build
+
+      - name: Verify build output
+        run: test -f docs/.vitepress/dist/index.html
+
+      - name: Set CNAME for custom domain
+        run: echo 'ai.zkkysqs.top' > docs/.vitepress/dist/CNAME
+
+      - name: Deploy to GitHub Pages
+        uses: crazy-max/ghaction-github-pages@v4
+        with:
+          target_branch: gh-pages
+          build_dir: docs/.vitepress/dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

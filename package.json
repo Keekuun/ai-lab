@@ -1,0 +1,16 @@
+{
+  "name": "ai-lab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI 学习笔记与项目 · ai.zkkysqs.top",
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.3"
+  }
+}
