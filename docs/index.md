@@ -16,7 +16,7 @@ tags:
 
 > 本站所有 AI 学习笔记的 **导航枢纽**。按学习阶段组织；深挖 API 见两条专系列。
 
-**快速入口：** [学习路线图](./ai-agent-learning-roadmap.md) · [RAG 博客实战](./rag-blog-knowledge-search.md) · [Skills 指南](./skills-guide.md)
+**快速入口：** [学习路线图](./ai-agent-learning-roadmap.md) · [RAG 博客实战](./rag-blog-knowledge-search.md) · [AI 工程补全专题](./28-llm-engineering-foundations.md) · [Skills 指南](./skills-guide.md)
 
 ---
 
@@ -178,6 +178,21 @@ flowchart TB
 
 ---
 
+## 九、AI 工程补全专题（28～31）
+
+这些专题不依赖某个框架，负责补齐模型、数据、可靠性和协议基础：
+
+| 篇 | 文章 | 解决的问题 |
+|----|------|------------|
+| 28 | [LLM 工程基础](./28-llm-engineering-foundations.md) | 训练、推理、微调和模型适配 |
+| 29 | [RAG 数据管道与评测](./29-rag-data-and-evaluation.md) | 索引质量、召回指标、引用可信度 |
+| 30 | [Agent 可靠性与安全](./30-agent-reliability-and-security.md) | 重试、权限、注入、恢复和审计 |
+| 31 | [MCP 与 Agent 协议](./31-mcp-and-agent-protocols.md) | Tool 能力标准化和可组合集成 |
+
+推荐顺序：`28 → 29 → 30 → 31`。做 RAG 的读完 28 后先读 29；做工具型 Agent 的读完 28 后先读 30。
+
+---
+
 ## 专系列：API 深挖
 
 | 专系列 | 篇数 | 入口 | 版本基准（校对日） | 适合 |
@@ -206,15 +221,15 @@ flowchart TB
 
 ### 路径 A：零基础到能上线（约 8～12 周）
 
-`01 → 04 → 07 → 08 → 09 → 10 → RAG实战 → 15 → 16 → 27 → 17 → 18 → 19`
+`01 → 02 → 04 → 07 → 08 → 09 → 10 → 28 → RAG实战 → 29 → 15 → 16 → 30 → 17 → 18 → 19`
 
 ### 路径 B：已有 OpenAI 经验，直接 Agent
 
-`07 → 08 → 09 → 11 → 16 → 17 → 18`
+`07 → 08 → 09 → 11 → 28 → 30 → 16 → 17 → 18`
 
 ### 路径 C：公司传统 Web 加 AI
 
-`24 → 15 → LG04 → 17 → 18 → LC09`
+`24 → 28 → 30 → 15 → LG04 → 17 → 18 → LC09`
 
 ### 路径 D：框架 API 词典（边做边查）
 
@@ -232,7 +247,8 @@ flowchart TB
 |------|------|
 | hello-agent（08 配套） | 自研 ReAct + Express SSE |
 | [LG 12 Route 示例](./langgraph/12-full-route-example.md) | Next.js + LangGraph 骨架 |
-| [**blog-assistant**](./19-blog-ai-assistant-capstone.md) | 收官应用 `apps/blog-assistant`（**LangGraph 0.4.x / LC 0.3.x**，与专系列 v1 基准见各 README） |
+| [**blog-assistant**](./19-blog-ai-assistant-capstone.md) | 外部收官应用 `apps/blog-assistant`（**LangGraph 0.4.x / LC 0.3.x**，与专系列 v1 基准见各 README） |
+| [Examples](../examples/README.md) | 本仓库的可运行实验规范与建设顺序 |
 
 ---
 
@@ -244,4 +260,4 @@ flowchart TB
 - 框架 **major 升级** 后：更新专系列 README 版本表 → 核对带 `import` 的篇章 → 必要时改 [blog-assistant](https://github.com/Keekuun/keekuun.github.io/tree/master/apps/blog-assistant/package.json) 或文内说明
 
 **上一阶段：** 框架专系列 LC16 + LG13 + Mastra MS01～08  
-**当前：** 收官应用 `apps/blog-assistant` 阶段 1～4 代码就绪；Mastra 专系列与 27 三角对照已发布
+**当前：** 先补齐 28～31 的 AI 工程基础，再把核心实验代码逐步收拢到本仓库的 `examples/` 目录；外部 `blog-assistant` 继续作为产品化案例

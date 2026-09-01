@@ -2,7 +2,7 @@
 
 > AI 学习笔记与实战项目 · 计划域名 [ai.zkkysqs.top](https://ai.zkkysqs.top)
 
-从 [keekuun.github.io](https://github.com/Keekuun/keekuun.github.io) 的 `docs/ai/` 迁移而来，包含 **72 篇** AI Agent / RAG / LangChain / LangGraph / Mastra 系列笔记。
+从 [keekuun.github.io](https://github.com/Keekuun/keekuun.github.io) 的 `docs/ai/` 迁移而来，包含 **76 篇** AI Agent / RAG / LangChain / LangGraph / Mastra 系列笔记。
 
 ## 本地开发
 
@@ -27,6 +27,8 @@ pnpm docs:preview
 | `docs/langchain/` | LangChain.js 专系列（16 篇） |
 | `docs/langgraph/` | LangGraph.js 专系列（13 篇） |
 | `docs/mastra/` | Mastra.js 专系列（8 篇） |
+| `docs/28～31` | AI 工程基础、RAG 评测、Agent 安全、MCP 专题 |
+| `examples/` | 可运行实验入口，按专题与主线文章对应 |
 
 ## 关联项目
 
