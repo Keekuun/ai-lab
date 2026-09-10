@@ -5,7 +5,7 @@ date: 2026-09-05
 
 # 可运行实验
 
-代码在仓库 [`examples/`](https://github.com/Keekuun/ai-lab/tree/master/examples)，每个目录只验证一件事。约定见该目录 README。
+代码在仓库 [`examples/`](https://github.com/Keekuun/ai-lab/tree/main/examples)，每个目录只验证一件事。约定见该目录 README。
 
 ```bash
 pnpm install
@@ -16,10 +16,10 @@ pnpm test:examples
 
 | 目录 | 对应文章 | 验收 | 状态 |
 |------|----------|------|------|
-| [01-structured-output](https://github.com/Keekuun/ai-lab/tree/master/examples/01-structured-output) | [09](./09-tools-system-design.md) · [28](./28-llm-engineering-foundations.md) · [LC10](./langchain/10-output-parsers.md) | 非法输出可恢复 | 可跑 |
-| [02-rag-evaluation](https://github.com/Keekuun/ai-lab/tree/master/examples/02-rag-evaluation) | [29](./29-rag-data-and-evaluation.md) · [11](./11-advanced-rag-patterns.md) | Recall@K、引用命中率 | 可跑 |
-| [03-reliable-agent](https://github.com/Keekuun/ai-lab/tree/master/examples/03-reliable-agent) | [30](./30-agent-reliability-and-security.md) · [18](./18-agent-production-checklist.md) | 超时、重试、审批、审计 | 可跑 |
-| [04-mcp-server](https://github.com/Keekuun/ai-lab/tree/master/examples/04-mcp-server) | [31](./31-mcp-and-agent-protocols.md) · [09](./09-tools-system-design.md) | 能力发现、Schema、权限 | 可跑 |
+| [01-structured-output](https://github.com/Keekuun/ai-lab/tree/main/examples/01-structured-output) | [09](./09-tools-system-design.md) · [28](./28-llm-engineering-foundations.md) · [LC10](./langchain/10-output-parsers.md) | 非法输出可恢复 | 可跑 |
+| [02-rag-evaluation](https://github.com/Keekuun/ai-lab/tree/main/examples/02-rag-evaluation) | [29](./29-rag-data-and-evaluation.md) · [11](./11-advanced-rag-patterns.md) | Recall@K、引用命中率 | 可跑 |
+| [03-reliable-agent](https://github.com/Keekuun/ai-lab/tree/main/examples/03-reliable-agent) | [30](./30-agent-reliability-and-security.md) · [18](./18-agent-production-checklist.md) | 超时、重试、审批、审计 | 可跑 |
+| [04-mcp-server](https://github.com/Keekuun/ai-lab/tree/main/examples/04-mcp-server) | [31](./31-mcp-and-agent-protocols.md) · [09](./09-tools-system-design.md) | 能力发现、Schema、权限 | 可跑 |
 
 ## 01 结构化输出
 
