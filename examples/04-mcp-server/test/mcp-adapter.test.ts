@@ -85,4 +85,29 @@ describe("connectCapabilityOverMcp", () => {
     expect(result.isError).toBe(true);
     await client.close();
   });
+
+  it("reader 经 MCP 能列出并读取只读 Resource", async () => {
+    const { capabilities } = createBlogCapabilities();
+    capabilities.registerResource({
+      uri: "blog://posts/welcome",
+      name: "welcome",
+      description: "欢迎帖",
+      mimeType: "text/plain",
+      risk: "read",
+      read: async () => "hello resource",
+    });
+    const mcpServer = connectCapabilityOverMcp(capabilities, { role: "reader" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "ai-lab-test", version: "0.1.0" });
+    await mcpServer.connect(serverTransport);
+    await client.connect(clientTransport);
+
+    const { resources } = await client.listResources();
+    expect(resources.map((resource) => resource.uri)).toEqual(["blog://posts/welcome"]);
+
+    const read = await client.readResource({ uri: "blog://posts/welcome" });
+    const text = read.contents.map((part) => ("text" in part ? part.text : "")).join("");
+    expect(text).toContain("hello resource");
+    await client.close();
+  });
 });

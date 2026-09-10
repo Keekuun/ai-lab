@@ -107,4 +107,38 @@ describe("createCapabilityServer", () => {
 
     expect(result).toMatchObject({ ok: false, reason: "not_found" });
   });
+
+  it("能列出并读取已注册的只读 Resource，未知 URI 在读取前失败", async () => {
+    const { server } = createBlogServer();
+    server.registerResource({
+      uri: "blog://posts/welcome",
+      name: "welcome",
+      description: "欢迎帖",
+      mimeType: "text/plain",
+      risk: "read",
+      read: async () => "hello resource",
+    });
+
+    expect(server.listResources()).toEqual([
+      {
+        uri: "blog://posts/welcome",
+        name: "welcome",
+        description: "欢迎帖",
+        mimeType: "text/plain",
+        risk: "read",
+      },
+    ]);
+
+    const found = await server.readResource({
+      uri: "blog://posts/welcome",
+      actor: { role: "reader" },
+    });
+    expect(found).toEqual({ ok: true, data: "hello resource" });
+
+    const missing = await server.readResource({
+      uri: "blog://posts/missing",
+      actor: { role: "reader" },
+    });
+    expect(missing).toMatchObject({ ok: false, reason: "not_found" });
+  });
 });

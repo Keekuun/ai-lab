@@ -20,5 +20,14 @@ export function createBlogCapabilities() {
     handler: async (args) => ({ id: "post-1", title: args.title }),
   });
 
+  server.registerResource({
+    uri: "blog://posts/welcome",
+    name: "welcome",
+    description: "欢迎帖",
+    mimeType: "text/plain",
+    risk: "read",
+    read: async () => "hello MCP resource",
+  });
+
   return server;
 }

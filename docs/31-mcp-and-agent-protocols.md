@@ -17,7 +17,7 @@ tags:
 >
 > **边界：** 本篇管协议与能力发现。业务 Tool 设计见 [09](./09-tools-system-design.md)，Skills 见 [23](./23-skills-agent-bridge.md)。
 >
-> **配套实验：** [04 MCP 能力服务](./examples.md#04-mcp-能力服务) — 同一套业务函数经官方 SDK 被 Client 发现；stdio / HTTP 可供编辑器接入，HTTP 可用 Bearer 映射角色。
+> **配套实验：** [04 MCP 能力服务](./examples.md#04-mcp-能力服务) — 同一套业务函数经官方 SDK 被 Client 发现；含只读 Resource、stdio / HTTP，HTTP 可用 Bearer 映射角色。
 
 ## Tool、Skills、RAG、MCP 的边界
 
@@ -32,7 +32,7 @@ tags:
 
 ## MCP 学习顺序
 
-1. 写一个只读 Resource Server。
+1. 写一个只读 Resource Server。本仓库 04 已暴露 `blog://posts/welcome`。
 2. 增加带 Zod Schema 的 Tool。
 3. 编写最小 Client，发现能力并调用 Tool。本仓库 04 已用内存传输、stdio 和 Streamable HTTP 跑通这一步。
 4. 增加鉴权、日志、错误映射和超时。04 的 HTTP 入口可用 Bearer token 映射 reader/writer；03 的 `runTool` 可包住 MCP `callTool`。

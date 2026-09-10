@@ -54,4 +54,4 @@ pnpm --filter @ai-lab/04-mcp-server start
 
 ## 部署
 
-推送到 `master` 后 GitHub Actions 自动构建并发布到 GitHub Pages。自定义域名 `ai.zkkysqs.top` 需在 Cloudflare 配置 CNAME。
+推送到 `main` 后 GitHub Actions 自动构建并发布到 GitHub Pages。自定义域名 `ai.zkkysqs.top` 需在 Cloudflare 配置 CNAME。

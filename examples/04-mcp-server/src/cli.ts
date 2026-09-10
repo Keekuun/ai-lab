@@ -28,10 +28,12 @@ const mcpClient = new Client({ name: "ai-lab-04-cli", version: "0.1.0" });
 await mcpServer.connect(serverTransport);
 await mcpClient.connect(clientTransport);
 const listed = await mcpClient.listTools();
+const listedResources = await mcpClient.listResources();
 const searched = await mcpClient.callTool({
   name: "search_blog",
   arguments: { query: "LCEL" },
 });
+const welcome = await mcpClient.readResource({ uri: "blog://posts/welcome" });
 await mcpClient.close();
 
 console.error("同一套业务函数：本地校验后，再经官方 MCP SDK 被 Client 发现和调用。stdio 见 src/stdio.ts，HTTP 见 src/http.ts。");
@@ -39,11 +41,14 @@ console.log(
   JSON.stringify(
     {
       discovered: discovered.map((item) => item.name),
+      resources: server.listResources().map((item) => item.uri),
       invalid,
       forbidden,
       published,
       mcpTools: listed.tools.map((tool) => tool.name),
+      mcpResources: listedResources.resources.map((item) => item.uri),
       mcpSearch: searched,
+      mcpWelcome: welcome,
     },
     null,
     2,

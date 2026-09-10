@@ -50,6 +50,23 @@ function jsonSchemaFromZod(schema: ZodTypeAny): Record<string, unknown> {
   };
 }
 
+export type RegisteredResource = {
+  uri: string;
+  name: string;
+  description: string;
+  mimeType: string;
+  risk: RiskLevel;
+  read: () => Promise<string>;
+};
+
+export type ResourceInfo = {
+  uri: string;
+  name: string;
+  description: string;
+  mimeType: string;
+  risk: RiskLevel;
+};
+
 export function canCall(role: ActorRole, risk: RiskLevel): boolean {
   if (risk === "read") {
     return role === "reader" || role === "writer";
@@ -59,12 +76,20 @@ export function canCall(role: ActorRole, risk: RiskLevel): boolean {
 
 export function createCapabilityServer() {
   const tools = new Map<string, RegisteredTool<unknown, unknown>>();
+  const resources = new Map<string, RegisteredResource>();
 
   return {
     register<TArgs, TResult>(tool: RegisteredTool<TArgs, TResult>): void {
       assert(tool.name.trim().length > 0, "tool.name 不能为空");
       assert(!tools.has(tool.name), `重复注册：${tool.name}`);
       tools.set(tool.name, tool as RegisteredTool<unknown, unknown>);
+    },
+
+    registerResource(resource: RegisteredResource): void {
+      assert(resource.uri.trim().length > 0, "resource.uri 不能为空");
+      assert(resource.name.trim().length > 0, "resource.name 不能为空");
+      assert(!resources.has(resource.uri), `重复注册 Resource：${resource.uri}`);
+      resources.set(resource.uri, resource);
     },
 
     listRegistered(): RegisteredTool<unknown, unknown>[] {
@@ -77,6 +102,16 @@ export function createCapabilityServer() {
         description: tool.description,
         risk: tool.risk,
         inputSchema: jsonSchemaFromZod(tool.schema),
+      }));
+    },
+
+    listResources(): ResourceInfo[] {
+      return [...resources.values()].map((resource) => ({
+        uri: resource.uri,
+        name: resource.name,
+        description: resource.description,
+        mimeType: resource.mimeType,
+        risk: resource.risk,
       }));
     },
 
@@ -104,6 +139,23 @@ export function createCapabilityServer() {
       }
 
       const data = (await tool.handler(parsed.data)) as T;
+      return { ok: true, data };
+    },
+
+    async readResource(options: {
+      uri: string;
+      actor: { role: ActorRole };
+    }): Promise<CallResult<string>> {
+      const resource = resources.get(options.uri);
+      if (!resource) {
+        return { ok: false, reason: "not_found" };
+      }
+
+      if (!canCall(options.actor.role, resource.risk)) {
+        return { ok: false, reason: "forbidden" };
+      }
+
+      const data = await resource.read();
       return { ok: true, data };
     },
   };

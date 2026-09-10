@@ -44,5 +44,38 @@ export function connectCapabilityOverMcp(
     );
   }
 
+  for (const resource of capabilities.listResources()) {
+    if (!canCall(actor.role, resource.risk)) {
+      continue;
+    }
+
+    mcpServer.registerResource(
+      resource.name,
+      resource.uri,
+      {
+        description: resource.description,
+        mimeType: resource.mimeType,
+      },
+      async (uri) => {
+        const result = await capabilities.readResource({
+          uri: uri.href,
+          actor,
+        });
+        if (!result.ok) {
+          throw new Error(result.error ?? result.reason);
+        }
+        return {
+          contents: [
+            {
+              uri: uri.href,
+              mimeType: resource.mimeType,
+              text: result.data,
+            },
+          ],
+        };
+      },
+    );
+  }
+
   return mcpServer;
 }
