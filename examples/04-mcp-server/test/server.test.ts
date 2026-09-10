@@ -141,4 +141,46 @@ describe("createCapabilityServer", () => {
     });
     expect(missing).toMatchObject({ ok: false, reason: "not_found" });
   });
+
+  it("能列出并渲染已注册的 Prompt，非法参数不会进 render", async () => {
+    const { server } = createBlogServer();
+    let renderCalls = 0;
+    server.registerPrompt({
+      name: "summarize_post",
+      description: "总结一篇博客",
+      risk: "read",
+      schema: z.object({ topic: z.string().min(1) }),
+      render: async (args) => {
+        renderCalls += 1;
+        return [{ role: "user", content: `总结：${args.topic}` }];
+      },
+    });
+
+    expect(server.listPrompts()).toEqual([
+      {
+        name: "summarize_post",
+        description: "总结一篇博客",
+        risk: "read",
+      },
+    ]);
+
+    const rendered = await server.getPrompt({
+      name: "summarize_post",
+      args: { topic: "MCP" },
+      actor: { role: "reader" },
+    });
+    expect(rendered).toEqual({
+      ok: true,
+      data: { messages: [{ role: "user", content: "总结：MCP" }] },
+    });
+    expect(renderCalls).toBe(1);
+
+    const invalid = await server.getPrompt({
+      name: "summarize_post",
+      args: { topic: "" },
+      actor: { role: "reader" },
+    });
+    expect(invalid).toMatchObject({ ok: false, reason: "invalid_args" });
+    expect(renderCalls).toBe(1);
+  });
 });

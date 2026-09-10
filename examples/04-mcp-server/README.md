@@ -2,7 +2,7 @@
 
 对应 [31 MCP 与 Agent 协议](../../docs/31-mcp-and-agent-protocols.md)、[09 Tools](../../docs/09-tools-system-design.md)。
 
-验收：Client 能发现 Tool 和只读 Resource；非法参数在执行前拒绝；reader 不能调用 write Tool。
+验收：Client 能发现 Tool、只读 Resource 和 Prompt；非法参数在执行前拒绝；reader 不能调用 write Tool。
 
 ## 前置条件
 
@@ -24,12 +24,13 @@ pnpm --filter @ai-lab/04-mcp-server http
 
 ## 输入 / 输出
 
-注册 `search_blog`（只读）、`publish_post`（写入）和 Resource `blog://posts/welcome`。演示会列出 Tool 和 Resource，然后用空 query、reader 发文、writer 发文各打一次。
+注册 `search_blog`（只读）、`publish_post`（写入）、Resource `blog://posts/welcome` 和 Prompt `summarize_post`。演示会列出 Tool、Resource 和 Prompt，然后用空 query、reader 发文、writer 发文各打一次。
 
 ```json
 {
   "discovered": ["search_blog", "publish_post"],
   "resources": ["blog://posts/welcome"],
+  "prompts": ["summarize_post"],
   "invalid": { "ok": false, "reason": "invalid_args" },
   "forbidden": { "ok": false, "reason": "forbidden" },
   "published": { "ok": true, "data": { "id": "post-1", "title": "hello" } }

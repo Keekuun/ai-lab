@@ -75,6 +75,15 @@ describe("HTTP MCP server", () => {
       : "";
     expect(text).toContain("http");
   });
+
+  it("reader 经 HTTP 能发现 Resource 和 Prompt", async () => {
+    const { client } = await connectHttp("reader");
+    const { resources } = await client.listResources();
+    expect(resources.map((resource) => resource.uri)).toEqual(["blog://posts/welcome"]);
+
+    const { prompts } = await client.listPrompts();
+    expect(prompts.map((prompt) => prompt.name)).toEqual(["summarize_post"]);
+  });
 });
 
 describe("HTTP MCP Bearer 鉴权", () => {

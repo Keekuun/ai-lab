@@ -77,5 +77,39 @@ export function connectCapabilityOverMcp(
     );
   }
 
+  for (const prompt of capabilities.listRegisteredPrompts()) {
+    if (!canCall(actor.role, prompt.risk)) {
+      continue;
+    }
+
+    const schema = prompt.schema as z.ZodObject<z.ZodRawShape>;
+    mcpServer.registerPrompt(
+      prompt.name,
+      {
+        description: prompt.description,
+        argsSchema: schema.shape,
+      },
+      async (args) => {
+        const result = await capabilities.getPrompt({
+          name: prompt.name,
+          args,
+          actor,
+        });
+        if (!result.ok) {
+          throw new Error(result.error ?? result.reason);
+        }
+        return {
+          messages: result.data.messages.map((message) => ({
+            role: message.role,
+            content: {
+              type: "text" as const,
+              text: message.content,
+            },
+          })),
+        };
+      },
+    );
+  }
+
   return mcpServer;
 }

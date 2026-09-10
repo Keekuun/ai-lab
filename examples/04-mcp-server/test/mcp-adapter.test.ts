@@ -110,4 +110,45 @@ describe("connectCapabilityOverMcp", () => {
     expect(text).toContain("hello resource");
     await client.close();
   });
+
+  it("reader 经 MCP 能列出并获取 Prompt", async () => {
+    const { capabilities } = createBlogCapabilities();
+    capabilities.registerPrompt({
+      name: "summarize_post",
+      description: "总结一篇博客",
+      risk: "read",
+      schema: z.object({ topic: z.string().min(1) }),
+      render: async (args) => [{ role: "user", content: `总结：${args.topic}` }],
+    });
+    const mcpServer = connectCapabilityOverMcp(capabilities, { role: "reader" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "ai-lab-test", version: "0.1.0" });
+    await mcpServer.connect(serverTransport);
+    await client.connect(clientTransport);
+
+    const { prompts } = await client.listPrompts();
+    expect(prompts.map((prompt) => prompt.name)).toEqual(["summarize_post"]);
+
+    const got = await client.getPrompt({
+      name: "summarize_post",
+      arguments: { topic: "MCP" },
+    });
+    const text = got.messages
+      .map((message) => {
+        const content = message.content;
+        if (typeof content === "string") {
+          return content;
+        }
+        if (Array.isArray(content)) {
+          return content.map((part) => ("text" in part ? part.text : "")).join("");
+        }
+        if (content && typeof content === "object" && "text" in content) {
+          return String(content.text);
+        }
+        return "";
+      })
+      .join("");
+    expect(text).toContain("MCP");
+    await client.close();
+  });
 });

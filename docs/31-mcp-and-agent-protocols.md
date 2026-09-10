@@ -17,7 +17,7 @@ tags:
 >
 > **边界：** 本篇管协议与能力发现。业务 Tool 设计见 [09](./09-tools-system-design.md)，Skills 见 [23](./23-skills-agent-bridge.md)。
 >
-> **配套实验：** [04 MCP 能力服务](./examples.md#04-mcp-能力服务) — 同一套业务函数经官方 SDK 被 Client 发现；含只读 Resource、stdio / HTTP，HTTP 可用 Bearer 映射角色。
+> **配套实验：** [04 MCP 能力服务](./examples.md#04-mcp-能力服务) — 同一套业务函数经官方 SDK 被 Client 发现；含 Tool、只读 Resource、Prompt，以及 stdio / HTTP。HTTP 可用 Bearer 映射角色。
 
 ## Tool、Skills、RAG、MCP 的边界
 

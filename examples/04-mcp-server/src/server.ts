@@ -67,6 +67,25 @@ export type ResourceInfo = {
   risk: RiskLevel;
 };
 
+export type PromptMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type CapabilityPrompt<TArgs> = {
+  name: string;
+  description: string;
+  risk: RiskLevel;
+  schema: z.ZodType<TArgs>;
+  render: (args: TArgs) => Promise<PromptMessage[]>;
+};
+
+export type PromptInfo = {
+  name: string;
+  description: string;
+  risk: RiskLevel;
+};
+
 export function canCall(role: ActorRole, risk: RiskLevel): boolean {
   if (risk === "read") {
     return role === "reader" || role === "writer";
@@ -77,6 +96,7 @@ export function canCall(role: ActorRole, risk: RiskLevel): boolean {
 export function createCapabilityServer() {
   const tools = new Map<string, RegisteredTool<unknown, unknown>>();
   const resources = new Map<string, RegisteredResource>();
+  const prompts = new Map<string, CapabilityPrompt<unknown>>();
 
   return {
     register<TArgs, TResult>(tool: RegisteredTool<TArgs, TResult>): void {
@@ -90,6 +110,12 @@ export function createCapabilityServer() {
       assert(resource.name.trim().length > 0, "resource.name 不能为空");
       assert(!resources.has(resource.uri), `重复注册 Resource：${resource.uri}`);
       resources.set(resource.uri, resource);
+    },
+
+    registerPrompt<TArgs>(prompt: CapabilityPrompt<TArgs>): void {
+      assert(prompt.name.trim().length > 0, "prompt.name 不能为空");
+      assert(!prompts.has(prompt.name), `重复注册 Prompt：${prompt.name}`);
+      prompts.set(prompt.name, prompt as CapabilityPrompt<unknown>);
     },
 
     listRegistered(): RegisteredTool<unknown, unknown>[] {
@@ -112,6 +138,18 @@ export function createCapabilityServer() {
         description: resource.description,
         mimeType: resource.mimeType,
         risk: resource.risk,
+      }));
+    },
+
+    listRegisteredPrompts(): CapabilityPrompt<unknown>[] {
+      return [...prompts.values()];
+    },
+
+    listPrompts(): PromptInfo[] {
+      return [...prompts.values()].map((prompt) => ({
+        name: prompt.name,
+        description: prompt.description,
+        risk: prompt.risk,
       }));
     },
 
@@ -157,6 +195,33 @@ export function createCapabilityServer() {
 
       const data = await resource.read();
       return { ok: true, data };
+    },
+
+    async getPrompt(options: {
+      name: string;
+      args: unknown;
+      actor: { role: ActorRole };
+    }): Promise<CallResult<{ messages: PromptMessage[] }>> {
+      const prompt = prompts.get(options.name);
+      if (!prompt) {
+        return { ok: false, reason: "not_found" };
+      }
+
+      if (!canCall(options.actor.role, prompt.risk)) {
+        return { ok: false, reason: "forbidden" };
+      }
+
+      const parsed = prompt.schema.safeParse(options.args);
+      if (!parsed.success) {
+        return {
+          ok: false,
+          reason: "invalid_args",
+          error: parsed.error.message,
+        };
+      }
+
+      const messages = await prompt.render(parsed.data);
+      return { ok: true, data: { messages } };
     },
   };
 }

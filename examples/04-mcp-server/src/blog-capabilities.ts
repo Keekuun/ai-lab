@@ -29,5 +29,13 @@ export function createBlogCapabilities() {
     read: async () => "hello MCP resource",
   });
 
+  server.registerPrompt({
+    name: "summarize_post",
+    description: "总结一篇博客",
+    risk: "read",
+    schema: z.object({ topic: z.string().min(1) }),
+    render: async (args) => [{ role: "user", content: `总结：${args.topic}` }],
+  });
+
   return server;
 }
