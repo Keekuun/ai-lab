@@ -14,6 +14,10 @@ tags:
 # Agent 可靠性与安全：让自动执行变得可控
 
 > Agent 的难点不是让模型多调用几个 Tool，而是让每一次调用都有边界、可恢复、可审计。
+>
+> **边界：** 本篇管运行时护栏和注入威胁模型。Tool 业务设计见 [09](./09-tools-system-design.md)，上线勾选表见 [18](./18-agent-production-checklist.md)。
+>
+> **配套实验：** [03 可靠 Agent](./examples.md#03-可靠-agent) — 超时、重试、审批；MCP Tool 也走同一套护栏。
 
 ## 先区分三类系统
 

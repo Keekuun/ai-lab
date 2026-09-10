@@ -179,7 +179,7 @@ Tool 参数由 **bindTools + Zod** 解析，不靠 OutputParser。Parser 用于�
 `JsonOutputParser` 解析失败率高。
 
 **2. 模型输出 markdown 代码块包裹 JSON**  
-```json ... ``` 要先 strip 再 parse；或 Prompt 禁止代码块。
+```json ... ``` 要先 strip 再 parse；或 Prompt 禁止代码块。可运行恢复路径见 [01 结构化输出](../examples.md#01-结构化输出)。
 
 **3. 流式解析 JSON**  
 半截 JSON parse 报错。

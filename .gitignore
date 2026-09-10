@@ -1,7 +1,9 @@
 node_modules
+.pnpm-store
 docs/.vitepress/dist
 docs/.vitepress/cache
 .DS_Store
 *.local
 .env
-.env.*
+.env.local
+.env.*.local

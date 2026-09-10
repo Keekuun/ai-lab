@@ -5,13 +5,61 @@ on:
     branches:
       - master
       - main
+  pull_request:
 
 concurrency:
   group: deploy-docs
   cancel-in-progress: true
 
 jobs:
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests and sidebar coverage
+        run: pnpm test
+
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check sidebar coverage
+        run: pnpm check:sidebar
+
+      - name: Build VitePress site
+        run: pnpm docs:build
+
   docs:
+    if: github.event_name == 'push'
+    needs: [examples, docs-check]
     runs-on: ubuntu-latest
     permissions:
       contents: write

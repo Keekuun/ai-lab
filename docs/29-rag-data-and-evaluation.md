@@ -14,6 +14,10 @@ tags:
 # RAG 数据管道与评测：从能检索到可信回答
 
 > RAG 的瓶颈通常不在最后一次 LLM 调用，而在数据进入索引的过程、召回结果的质量，以及答案是否能被证据支持。
+>
+> **边界：** 本篇管索引质量和 Recall。检索策略见 [11](./11-advanced-rag-patterns.md)，Agent 端到端回归见 [22](./22-agent-eval-regression.md)。
+>
+> **配套实验：** [02 RAG 评测](./examples.md#02-rag-评测) — 改分块后看 Recall@K；检索可换成注入的 embedding，证据不足必须拒答。
 
 ## 数据管道
 

@@ -23,6 +23,7 @@ export default defineConfig({
     nav: [
       { text: '首页', link: '/' },
       { text: '学习路线', link: '/ai-agent-learning-roadmap' },
+      { text: '实验', link: '/examples' },
       { text: 'LangChain', link: '/langchain/' },
       { text: 'LangGraph', link: '/langgraph/' },
       { text: 'Mastra', link: '/mastra/' },
@@ -52,6 +53,7 @@ export default defineConfig({
           items: [
             { text: '系列总索引', link: '/' },
             { text: '学习路线图', link: '/ai-agent-learning-roadmap' },
+            { text: '可运行实验', link: '/examples' },
             { text: 'Skills 指南', link: '/skills-guide' },
             { text: 'GitHub AI 库', link: '/github-ai' },
           ],
@@ -130,6 +132,16 @@ export default defineConfig({
           items: [
             { text: '25 Langfuse', link: '/25-langfuse-practice' },
             { text: '26 CopilotKit', link: '/26-copilotkit-guide' },
+          ],
+        },
+        {
+          text: 'AI 工程 28～31',
+          collapsed: false,
+          items: [
+            { text: '28 LLM 工程基础', link: '/28-llm-engineering-foundations' },
+            { text: '29 RAG 数据与评测', link: '/29-rag-data-and-evaluation' },
+            { text: '30 可靠性与安全', link: '/30-agent-reliability-and-security' },
+            { text: '31 MCP 与协议', link: '/31-mcp-and-agent-protocols' },
           ],
         },
       ],

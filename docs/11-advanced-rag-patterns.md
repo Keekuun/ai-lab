@@ -298,7 +298,7 @@ Agent 用 [ReAct](./08-build-first-agent.md) 自己决定何时搜、搜什么�
 
 ## 怎么知道改好了没有
 
-别靠感觉。准备 20～50 条 **黄金测试**：真实问题 + 期望落在哪篇文档。
+别靠感觉。准备 20～50 条 **黄金测试**：真实问题 + 期望落在哪篇文档。可运行的最小评测见 [02 RAG 评测](./examples.md#02-rag-评测)。
 
 ```typescript
 interface EvalCase {

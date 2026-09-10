@@ -14,7 +14,9 @@ tags:
 
 # Tools 系统设计与实现 - 让 Agent 拥有超能力
 
-> 深入解析如何设计和实现强大的工具系统，扩展 Agent 的能力边界
+> 深入解析如何设计和实现强大的工具系统，扩展 Agent 的能力边界。
+>
+> **配套实验：** [01 结构化输出](./examples.md#01-结构化输出) 演示 Schema 校验失败后如何拒绝脏数据并重试。微调 vs Prompt 的决策见 [28](./28-llm-engineering-foundations.md)。
 
 
 ## 📚 目录

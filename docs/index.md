@@ -16,7 +16,7 @@ tags:
 
 > 本站所有 AI 学习笔记的 **导航枢纽**。按学习阶段组织；深挖 API 见两条专系列。
 
-**快速入口：** [学习路线图](./ai-agent-learning-roadmap.md) · [RAG 博客实战](./rag-blog-knowledge-search.md) · [AI 工程补全专题](./28-llm-engineering-foundations.md) · [Skills 指南](./skills-guide.md)
+**快速入口：** [学习路线图](./ai-agent-learning-roadmap.md) · [可运行实验](./examples.md) · [RAG 博客实战](./rag-blog-knowledge-search.md) · [AI 工程补全专题](./28-llm-engineering-foundations.md) · [Skills 指南](./skills-guide.md)
 
 ---
 
@@ -248,7 +248,7 @@ flowchart TB
 | hello-agent（08 配套） | 自研 ReAct + Express SSE |
 | [LG 12 Route 示例](./langgraph/12-full-route-example.md) | Next.js + LangGraph 骨架 |
 | [**blog-assistant**](./19-blog-ai-assistant-capstone.md) | 外部收官应用 `apps/blog-assistant`（**LangGraph 0.4.x / LC 0.3.x**，与专系列 v1 基准见各 README） |
-| [Examples](../examples/README.md) | 本仓库的可运行实验规范与建设顺序 |
+| [Examples](./examples.md) | 本仓库的可运行实验。01～04 均已可跑 |
 
 ---
 
@@ -258,6 +258,7 @@ flowchart TB
 - `langchain/`、`langgraph/`、`mastra/` 为框架 API 专系列，独立编号；**每系列 README 含「版本基准与维护」**（校对日期 + npm 版本 + 维护 checklist）
 - 文风：前端视角、TypeScript、架构图、常见坑；避免空泛 AI 腔
 - 框架 **major 升级** 后：更新专系列 README 版本表 → 核对带 `import` 的篇章 → 必要时改 [blog-assistant](https://github.com/Keekuun/keekuun.github.io/tree/master/apps/blog-assistant/package.json) 或文内说明
+- 新增 `docs/**/*.md` 必须挂进 VitePress sidebar，`pnpm check:sidebar` 会拦
 
 **上一阶段：** 框架专系列 LC16 + LG13 + Mastra MS01～08  
-**当前：** 先补齐 28～31 的 AI 工程基础，再把核心实验代码逐步收拢到本仓库的 `examples/` 目录；外部 `blog-assistant` 继续作为产品化案例
+**当前：** 28～31 与 examples 01～04 已可跑；侧栏覆盖和死链检查进了 CI。外部 `blog-assistant` 继续作为产品化案例，不要先抽共享框架。

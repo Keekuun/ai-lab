@@ -8,7 +8,11 @@
   "scripts": {
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "check:sidebar": "node scripts/check-sidebar.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "test:examples": "pnpm --filter \"./examples/**\" test",
+    "test": "pnpm test:scripts && pnpm test:examples && pnpm check:sidebar"
   },
   "devDependencies": {
     "sharp": "^0.35.2",

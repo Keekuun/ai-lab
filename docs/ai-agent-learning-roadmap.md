@@ -15,6 +15,10 @@ tags:
 # AI Agent 前端开发者学习路线图
 
 > 作为前端开发者，如何系统性地学习和掌握 AI Agent 开发技能
+>
+> **现在怎么学：** 文章编号和推荐路径以 [总索引](./index.md) 为准。本页是早期规划长文，型号表和「待写博客」可能过时。
+>
+> 最短路径：总索引路径 A → 跑 [可运行实验](./examples.md) → 需要 API 细节再进 LangChain / LangGraph / Mastra 专系列。
 
 ## 📚 目录
 
@@ -1499,6 +1503,6 @@ AI Agent 开发是一个快速发展的领域，作为前端开发者，你拥�
 
 **参考资料：**
 - OpenAI Documentation: https://platform.openai.com/docs
-- LangChain Docs: https://python.langchain.com/docs
+- LangChain.js Docs: https://docs.langchain.com/oss/javascript/langchain/overview
 - Vercel AI SDK: https://sdk.vercel.ai/docs
 - Awesome LLM Apps: https://github.com/Shubhamsaboo/awesome-llm-apps

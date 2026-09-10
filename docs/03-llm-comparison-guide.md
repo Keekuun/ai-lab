@@ -15,11 +15,39 @@ tags:
 
 # 主流大模型对比与选型指南
 
-> 从功能、性能、成本多维度对比，帮你选择最适合的 LLM
+> 从功能、性能、成本多维度对比，帮你选择最适合的 LLM。
+>
+> **先看怎么选，再看型号。** 下面长文里的 GPT-4o / Claude 3.5 对照会过期，以各家当前价目和文档为准。工程决策见 [28](./28-llm-engineering-foundations.md)。
 
+## 怎么选（比型号表更稳）
+
+选型顺序：
+
+```text
+数据能不能出公司？     不能 → 开源 / 私有化部署
+要稳定 JSON 或 Tool？  要 → 先跑 Schema 评测，不看参数量广告
+延迟和单价上限是多少？ 先定预算和 SLA，再选档位
+知识会不会经常变？     会变 → RAG，不要为了新知识微调
+```
+
+只改 Prompt 或换小模型就能过评测时，不要上微调。可运行的结构化输出恢复见 [01 实验](./examples.md#01-结构化输出)。
+
+### 2026-09-05 型号快照
+
+这张表只用来起步，不替代官网。价格和上下文以供应商页面为准。
+
+| 场景 | 先看什么 | 当时常见档位 |
+|------|----------|--------------|
+| 编程 / Agent | 工具调用稳定性、拒绝率、延迟 | Claude Fable 5.1、GPT-6 Astra、Qwen3.8-Max |
+| 便宜路由 / 分类 | 单价、缓存命中、结构化输出 | Gemini 3.8 Flash、各家 mini / flash |
+| 中文产品 | 中文评测 + 国内可用 API | Qwen3.8-Max |
+| 超长文档 | 上下文价格，不是只看窗口数字 | 各家 1M 档，先测截断和引用 |
+
+核对入口：[OpenAI Models](https://platform.openai.com/docs/models) · [Anthropic](https://docs.anthropic.com/en/docs/about-claude/models) · [Gemini](https://ai.google.dev/gemini-api/docs/models) · [Qwen](https://help.aliyun.com/zh/model-studio/)
 
 ## 📚 目录
 
+- [怎么选（比型号表更稳）](#怎么选比型号表更稳)
 - [为什么需要对比选型](#为什么需要对比选型)
 - [主要玩家全景图](#主要玩家全景图)
 - [详细模型对比](#详细模型对比)

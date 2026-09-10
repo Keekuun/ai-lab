@@ -2,7 +2,7 @@
 
 > AI 学习笔记与实战项目 · 计划域名 [ai.zkkysqs.top](https://ai.zkkysqs.top)
 
-从 [keekuun.github.io](https://github.com/Keekuun/keekuun.github.io) 的 `docs/ai/` 迁移而来，包含 **76 篇** AI Agent / RAG / LangChain / LangGraph / Mastra 系列笔记。
+从 [keekuun.github.io](https://github.com/Keekuun/keekuun.github.io) 的 `docs/ai/` 迁移而来，包含 **76 篇** AI Agent / RAG / LangChain / LangGraph / Mastra 系列笔记。本仓库 `examples/01`～`04` 已可跑：结构化输出、RAG 评测、可靠 Agent、MCP 能力发现。
 
 ## 本地开发
 
@@ -14,9 +14,24 @@ pnpm docs:dev    # http://localhost:5173
 ## 构建
 
 ```bash
+pnpm test            # 脚本检查 + 四个实验 + 侧栏覆盖
 pnpm docs:build
 pnpm docs:preview
 ```
+
+`pnpm check:sidebar` 会拦住「写了 md 却没挂进侧栏」。PR 和 push 都会跑测试；只有 push 到 `master`/`main` 才发布站点。
+
+## 实验
+
+```bash
+pnpm test:examples
+pnpm --filter @ai-lab/01-structured-output start
+pnpm --filter @ai-lab/02-rag-evaluation start
+pnpm --filter @ai-lab/03-reliable-agent start
+pnpm --filter @ai-lab/04-mcp-server start
+```
+
+四个实验都不填 Key 也能跑本地演示。02 填了 Key 才走 embedding；03 的护栏也能包住 MCP Tool；04 提供内存传输、`stdio` 和 Streamable HTTP。站点入口见 [可运行实验](./docs/examples.md)，仓库约定见 [examples/README.md](./examples/README.md)。
 
 ## 目录
 
