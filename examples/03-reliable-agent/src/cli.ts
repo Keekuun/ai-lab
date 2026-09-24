@@ -3,6 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createMcpTool } from "./mcp-tool.js";
+import { createPersistentLedger } from "./persistent-ledger.js";
 import { createCircuitBreaker, runTool, type AuditEvent, type Ledger } from "./run-tool.js";
 
 function sleep(ms: number): Promise<void> {
@@ -12,7 +13,10 @@ function sleep(ms: number): Promise<void> {
 }
 
 const audit: AuditEvent[] = [];
-const ledger: Ledger = new Map();
+// 设 LEDGER_PATH 用落盘账本（重启后重放仍命中）；默认进程内 Map
+const ledger: Ledger = process.env.LEDGER_PATH
+  ? createPersistentLedger(process.env.LEDGER_PATH)
+  : new Map();
 let charges = 0;
 
 const timeoutResult = await runTool({
