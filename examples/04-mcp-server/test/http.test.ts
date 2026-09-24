@@ -73,7 +73,7 @@ describe("HTTP MCP server", () => {
     const text = Array.isArray(result.content)
       ? result.content.map((part) => ("text" in part ? part.text : "")).join("")
       : "";
-    expect(text).toContain("http");
+    expect(JSON.parse(text)).toEqual({ hits: [] });
   });
 
   it("reader 经 HTTP 能发现 Resource 和 Prompt", async () => {

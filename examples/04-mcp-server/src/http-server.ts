@@ -74,6 +74,7 @@ export async function startHttpMcpServer(options: {
   tokens?: HttpAuthTokens;
   host?: string;
   port?: number;
+  storePath?: string;
 }): Promise<{ url: URL; close: () => Promise<void> }> {
   const host = options.host ?? DEFAULT_HOST;
   const port = options.port ?? 0;
@@ -86,6 +87,7 @@ export async function startHttpMcpServer(options: {
   }
 
   const capabilities = createBlogCapabilities({
+    storePath: options.storePath,
     onAudit: (event) => {
       console.error(`audit ${JSON.stringify(event)}`);
     },

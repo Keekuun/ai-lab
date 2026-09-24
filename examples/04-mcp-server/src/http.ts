@@ -20,6 +20,7 @@ const started = await startHttpMcpServer({
   tokens,
   host: "127.0.0.1",
   port,
+  storePath: process.env.MCP_STORE_PATH,
 });
 
 console.error(

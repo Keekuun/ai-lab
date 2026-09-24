@@ -56,6 +56,8 @@ tags:
 - 日志能关联用户、租户、请求和 Tool 调用。
 - Server 重启后不会丢失需要持久化的业务状态。
 
+前六条在本仓库 04 均有可运行验证：Schema 与权限在能力层校验，handler 有 `timeoutMs`，`publish_post` 用 `idempotencyKey` 去重，`onAudit` 记录角色与结果，`MCP_STORE_PATH` 落盘保证重启不丢。租户字段和持久化 Trace 仍是后续方向。
+
 ## 从本项目开始的实践
 
 把 [09 Tools](./09-tools-system-design.md) 中的天气、Wikipedia 或博客检索 Tool 分阶段迁移：

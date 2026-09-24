@@ -2,7 +2,7 @@
 
 对应 [31 MCP 与 Agent 协议](../../docs/31-mcp-and-agent-protocols.md)、[09 Tools](../../docs/09-tools-system-design.md)。
 
-验收：Client 能发现 Tool、只读 Resource 和 Prompt；非法参数在执行前拒绝；reader 不能调用 write Tool；handler 超时返回 `timeout` 不拖死调用方；每次调用写审计日志（角色、名称、耗时、结果）。
+验收：Client 能发现 Tool、只读 Resource 和 Prompt；非法参数在执行前拒绝；reader 不能调用 write Tool；handler 超时返回 `timeout` 不拖死调用方；每次调用写审计日志（角色、名称、耗时、结果）；同一 `idempotencyKey` 重复发布不新增；配置 `MCP_STORE_PATH` 后重启不丢帖子。
 
 ## 前置条件
 
@@ -24,9 +24,11 @@ pnpm --filter @ai-lab/04-mcp-server http
 
 能力层带护栏：handler 默认 10 秒超时（`createCapabilityServer({ timeoutMs })` 可调），超时返回 `{ ok: false, reason: "timeout" }`；每次 Tool / Resource / Prompt 调用都会触发 `onAudit` 回调，stdio 和 HTTP 入口把审计事件打到 stderr。
 
+`publish_post` 必须带 `idempotencyKey`，同一键重复调用返回已有帖子（`deduplicated: true`），不新增。设置 `MCP_STORE_PATH=/path/posts.json` 后，发布的帖子落盘，进程重启仍能搜到。
+
 ## 输入 / 输出
 
-注册 `search_blog`（只读）、`publish_post`（写入）、Resource `blog://posts/welcome` 和 Prompt `summarize_post`。演示会列出 Tool、Resource 和 Prompt，然后用空 query、reader 发文、writer 发文各打一次。
+注册 `search_blog`（只读）、`publish_post`（写入）、Resource `blog://posts/welcome` 和 Prompt `summarize_post`。演示会列出 Tool、Resource 和 Prompt，然后用空 query、reader 发文、writer 发文、同键重发各打一次。
 
 ```json
 {
@@ -35,7 +37,8 @@ pnpm --filter @ai-lab/04-mcp-server http
   "prompts": ["summarize_post"],
   "invalid": { "ok": false, "reason": "invalid_args" },
   "forbidden": { "ok": false, "reason": "forbidden" },
-  "published": { "ok": true, "data": { "id": "post-1", "title": "hello" } }
+  "published": { "ok": true, "data": { "id": "post-1", "title": "LCEL 入门", "deduplicated": false } },
+  "republished": { "ok": true, "data": { "id": "post-1", "title": "LCEL 入门", "deduplicated": true } }
 }
 ```
 
@@ -48,6 +51,7 @@ pnpm --filter @ai-lab/04-mcp-server http
 - stdio 和 Streamable HTTP 已接好，不要复制一套业务 handler。HTTP 只绑 `127.0.0.1`；Bearer token 不是 OAuth。
 - 超时只保证调用方按时返回，handler 内部的异步任务不会被真正取消。
 - 审计日志是内存回调，不是持久化 Trace；多租户字段（用户、租户 ID）还没进事件。
+- 持久化是单文件 JSON，无并发写保护；多实例部署要换数据库。
 - JSON Schema 只覆盖本实验用到的 `z.object` 字符串字段。
 - 鉴权是角色枚举，不是 OAuth / 租户隔离。
 

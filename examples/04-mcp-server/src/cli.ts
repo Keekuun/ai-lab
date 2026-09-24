@@ -19,12 +19,17 @@ const invalid = await server.call({
 });
 const forbidden = await server.call({
   name: "publish_post",
-  args: { title: "hello" },
+  args: { title: "hello", idempotencyKey: "demo-forbidden" },
   actor: { role: "reader" },
 });
 const published = await server.call({
   name: "publish_post",
-  args: { title: "hello" },
+  args: { title: "LCEL 入门", idempotencyKey: "demo-lcel" },
+  actor: { role: "writer" },
+});
+const republished = await server.call({
+  name: "publish_post",
+  args: { title: "LCEL 入门", idempotencyKey: "demo-lcel" },
   actor: { role: "writer" },
 });
 
@@ -57,6 +62,7 @@ console.log(
       invalid,
       forbidden,
       published,
+      republished,
       mcpTools: listed.tools.map((tool) => tool.name),
       mcpResources: listedResources.resources.map((item) => item.uri),
       mcpPrompts: listedPrompts.prompts.map((item) => item.name),

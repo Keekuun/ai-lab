@@ -19,7 +19,7 @@ pnpm test:examples
 | [01-structured-output](https://github.com/Keekuun/ai-lab/tree/main/examples/01-structured-output) | [09](./09-tools-system-design.md) · [28](./28-llm-engineering-foundations.md) · [LC10](./langchain/10-output-parsers.md) | 非法输出可恢复 | 可跑 |
 | [02-rag-evaluation](https://github.com/Keekuun/ai-lab/tree/main/examples/02-rag-evaluation) | [29](./29-rag-data-and-evaluation.md) · [11](./11-advanced-rag-patterns.md) | Recall@K、引用命中率 | 可跑 |
 | [03-reliable-agent](https://github.com/Keekuun/ai-lab/tree/main/examples/03-reliable-agent) | [30](./30-agent-reliability-and-security.md) · [18](./18-agent-production-checklist.md) | 超时、重试、审批、审计 | 可跑 |
-| [04-mcp-server](https://github.com/Keekuun/ai-lab/tree/main/examples/04-mcp-server) | [31](./31-mcp-and-agent-protocols.md) · [09](./09-tools-system-design.md) | 能力发现、Schema、权限、Resource、Prompt、超时、审计 | 可跑 |
+| [04-mcp-server](https://github.com/Keekuun/ai-lab/tree/main/examples/04-mcp-server) | [31](./31-mcp-and-agent-protocols.md) · [09](./09-tools-system-design.md) | 能力发现、Schema、权限、Resource、Prompt、超时、审计、幂等、持久化 | 可跑 |
 
 ## 01 结构化输出
 
@@ -50,7 +50,7 @@ pnpm --filter @ai-lab/03-reliable-agent start
 
 ## 04 MCP 能力服务
 
-同一套业务函数先本地校验，再经官方 MCP SDK 被 Client 发现。`stdio` 和 `http`（默认 `http://127.0.0.1:3333/mcp`）可供 Cursor / Claude 接入。HTTP 可配 Bearer token，角色由 token 决定；reader 看不到 write 能力。只读 Resource `blog://posts/welcome` 和 Prompt `summarize_post` 与 Tool 走同一套权限。
+同一套业务函数先本地校验，再经官方 MCP SDK 被 Client 发现。`stdio` 和 `http`（默认 `http://127.0.0.1:3333/mcp`）可供 Cursor / Claude 接入。HTTP 可配 Bearer token，角色由 token 决定；reader 看不到 write 能力。只读 Resource `blog://posts/welcome` 和 Prompt `summarize_post` 与 Tool 走同一套权限。`publish_post` 按 `idempotencyKey` 去重，`MCP_STORE_PATH` 落盘后重启不丢。
 
 ```bash
 pnpm --filter @ai-lab/04-mcp-server test

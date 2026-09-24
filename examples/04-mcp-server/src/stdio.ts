@@ -4,6 +4,7 @@ import { connectCapabilityOverMcp } from "./mcp-adapter.js";
 
 const actorRole = process.env.MCP_ACTOR_ROLE === "reader" ? "reader" : "writer";
 const capabilities = createBlogCapabilities({
+  storePath: process.env.MCP_STORE_PATH,
   onAudit: (event) => {
     console.error(`audit ${JSON.stringify(event)}`);
   },

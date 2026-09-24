@@ -51,6 +51,6 @@ describe("stdio MCP server", () => {
     const text = Array.isArray(result.content)
       ? result.content.map((part) => ("text" in part ? part.text : "")).join("")
       : "";
-    expect(text).toContain("stdio");
+    expect(JSON.parse(text)).toEqual({ hits: [] });
   });
 });
