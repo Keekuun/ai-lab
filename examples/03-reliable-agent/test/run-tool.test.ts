@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { describe, expect, it } from "vitest";
 import { runTool, type AuditEvent, type Ledger } from "../src/run-tool.js";
 
@@ -131,5 +132,51 @@ describe("runTool", () => {
     expect(charges).toBe(1);
     expect(first).toEqual({ ok: true, data: { charged: 99 } });
     expect(second).toEqual({ ok: true, data: { charged: 99 } });
+  });
+
+  it("字符串输出超过 maxOutputChars 被截断并标记 truncated", async () => {
+    const result = await runTool({
+      requestId: "req-truncate",
+      tool: {
+        name: "verbose_search",
+        risk: "read",
+        maxOutputChars: 10,
+        execute: () => Promise.resolve("x".repeat(500)),
+      },
+      args: {},
+      audit: [],
+    });
+
+    assert(result.ok);
+    expect(result.truncated).toBe(true);
+    expect((result.data as string).length).toBeLessThanOrEqual(10);
+  });
+
+  it("未超限不截断，非字符串输出原样返回", async () => {
+    const shortResult = await runTool({
+      requestId: "req-short",
+      tool: {
+        name: "short_search",
+        risk: "read",
+        maxOutputChars: 100,
+        execute: () => Promise.resolve("short"),
+      },
+      args: {},
+      audit: [],
+    });
+    expect(shortResult).toEqual({ ok: true, data: "short" });
+
+    const objectResult = await runTool({
+      requestId: "req-object",
+      tool: {
+        name: "object_search",
+        risk: "read",
+        maxOutputChars: 5,
+        execute: () => Promise.resolve({ hits: [1, 2, 3] }),
+      },
+      args: {},
+      audit: [],
+    });
+    expect(objectResult).toEqual({ ok: true, data: { hits: [1, 2, 3] } });
   });
 });

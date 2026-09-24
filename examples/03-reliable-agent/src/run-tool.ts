@@ -20,7 +20,7 @@ export type AuditEvent = {
 export type Ledger = Map<string, unknown>;
 
 export type ToolResult<T> =
-  | { ok: true; data: T }
+  | { ok: true; data: T; truncated?: boolean }
   | { ok: false; reason: "timeout" | "needs_approval" | "circuit_open" | "error"; error?: string };
 
 export type ToolDefinition<T> = {
@@ -28,6 +28,7 @@ export type ToolDefinition<T> = {
   risk: RiskLevel;
   timeoutMs?: number;
   maxRetries?: number;
+  maxOutputChars?: number;
   execute: (args: unknown) => Promise<T>;
 };
 
@@ -161,10 +162,20 @@ export async function runTool<T>(options: {
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
-      const data = await withTimeout(
+      let data: T = await withTimeout(
         () => options.tool.execute(options.args),
         options.tool.timeoutMs,
       );
+      // 30：Tool 输出限制长度，避免上下文膨胀。只截断字符串，结构化输出原样返回
+      let truncated = false;
+      const maxOutputChars = options.tool.maxOutputChars;
+      if (maxOutputChars !== undefined) {
+        assert(maxOutputChars >= 1, "maxOutputChars 必须 >= 1");
+        if (typeof data === "string" && data.length > maxOutputChars) {
+          data = data.slice(0, maxOutputChars) as T;
+          truncated = true;
+        }
+      }
       if (options.idempotencyKey && options.ledger) {
         options.ledger.set(options.idempotencyKey, data);
       }
@@ -172,7 +183,7 @@ export async function runTool<T>(options: {
         onCircuitSuccess(breaker);
       }
       record(options.audit, options.requestId, options.tool, "ok");
-      return { ok: true, data };
+      return truncated ? { ok: true, data, truncated } : { ok: true, data };
     } catch (error) {
       const isTimeout = error instanceof TimeoutError;
       if (attempt < maxRetries) {

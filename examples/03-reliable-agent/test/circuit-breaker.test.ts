@@ -43,8 +43,7 @@ async function runFailing(
 }
 
 describe("circuitBreaker", () => {
-  it("连续失败达到阈值后熔断，handler 不再执行", async () => {
-    const clock = createClock();
+  it("连续失败达到阈值后熔断，handler 不再执行", async () => {    const clock = createClock();
     const breaker = createCircuitBreaker({
       failureThreshold: FAILURE_THRESHOLD,
       cooldownMs: COOLDOWN_MS,

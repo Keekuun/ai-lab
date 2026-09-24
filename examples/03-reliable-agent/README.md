@@ -2,7 +2,7 @@
 
 对应 [30 Agent 可靠性与安全](../../docs/30-agent-reliability-and-security.md)、[18 上线 Checklist](../../docs/18-agent-production-checklist.md)。
 
-验收：Tool 超时可恢复；高风险操作要审批；同一幂等键重放不会重复扣款或发信；连续失败达到阈值后熔断，冷却期内不再执行 handler。
+验收：Tool 超时可恢复；高风险操作要审批；同一幂等键重放不会重复扣款或发信；连续失败达到阈值后熔断，冷却期内不再执行 handler；字符串输出超过 `maxOutputChars` 被截断并标记 `truncated`。
 
 ## 前置条件
 
