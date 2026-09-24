@@ -22,7 +22,7 @@ pnpm --filter @ai-lab/04-mcp-server http
 
 `stdio` 只在 stdin/stdout 上讲 MCP。日志不能打到 stdout。`http` 默认监听 `http://127.0.0.1:3333/mcp`，用 `PORT` 改端口。未配 token 时角色用 `MCP_ACTOR_ROLE=reader|writer`（默认 writer）。成对设置 `MCP_HTTP_READER_TOKEN` / `MCP_HTTP_WRITER_TOKEN` 后，每次请求必须带 `Authorization: Bearer <token>`，角色由 token 决定。Cursor / Claude 可把 `stdio` 或该 HTTP 地址配成 MCP Server。HTTP 按会话分配 `mcp-session-id`，同一进程可接多个 Client。
 
-能力层带护栏：handler 默认 10 秒超时（`createCapabilityServer({ timeoutMs })` 可调），超时返回 `{ ok: false, reason: "timeout" }`；每次 Tool / Resource / Prompt 调用都会触发 `onAudit` 回调，stdio 和 HTTP 入口把审计事件打到 stderr。
+能力层带护栏：handler 默认 10 秒超时（`createCapabilityServer({ timeoutMs })` 可调），超时返回 `{ ok: false, reason: "timeout" }`，并通过 `ctx.signal`（AbortSignal）真正中断监听取消的 handler；每次 Tool / Resource / Prompt 调用都会触发 `onAudit` 回调，事件带 `requestId`（调用方可传入以关联上游请求），stdio 和 HTTP 入口把审计事件打到 stderr。
 
 `publish_post` 必须带 `idempotencyKey`，同一键重复调用返回已有帖子（`deduplicated: true`），不新增。设置 `MCP_STORE_PATH=/path/posts.json` 后，发布的帖子落盘，进程重启仍能搜到。
 
@@ -49,7 +49,7 @@ pnpm --filter @ai-lab/04-mcp-server http
 ## 已知限制
 
 - stdio 和 Streamable HTTP 已接好，不要复制一套业务 handler。HTTP 只绑 `127.0.0.1`；Bearer token 不是 OAuth。
-- 超时只保证调用方按时返回，handler 内部的异步任务不会被真正取消。
+- 只有监听 `ctx.signal` 的 handler 才能被真正中断；不监听的 handler 仍在后台跑完。
 - 审计日志是内存回调，不是持久化 Trace；多租户字段（用户、租户 ID）还没进事件。
 - 持久化是单文件 JSON，无并发写保护；多实例部署要换数据库。
 - JSON Schema 只覆盖本实验用到的 `z.object` 字符串字段。

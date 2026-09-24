@@ -208,6 +208,37 @@ describe("createCapabilityServer", () => {
     expect(result).toMatchObject({ ok: false, reason: "timeout" });
   });
 
+  it("超时会通过 AbortSignal 真正中断 handler", async () => {
+    const server = createCapabilityServer({ timeoutMs: 20 });
+    let aborted = false;
+    server.register({
+      name: "cancellable_search",
+      description: "监听取消信号的检索",
+      risk: "read",
+      schema: z.object({ query: z.string().min(1) }),
+      handler: async (_args, ctx) => {
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, 5000);
+          ctx.signal.addEventListener("abort", () => {
+            aborted = true;
+            clearTimeout(timer);
+            reject(new Error("aborted"));
+          });
+        });
+        return { hits: [] };
+      },
+    });
+
+    const result = await server.call({
+      name: "cancellable_search",
+      args: { query: "mcp" },
+      actor: { role: "reader" },
+    });
+
+    expect(result).toMatchObject({ ok: false, reason: "timeout" });
+    expect(aborted).toBe(true);
+  });
+
   it("onAudit 记录每次调用的角色、名称、耗时和结果", async () => {
     const audits: unknown[] = [];
     const server = createCapabilityServer({
@@ -270,5 +301,37 @@ describe("createCapabilityServer", () => {
     for (const event of audits) {
       expect(typeof (event as { durationMs: number }).durationMs).toBe("number");
     }
+  });
+
+  it("audit 事件带 requestId，调用方可以传入以关联请求", async () => {
+    const audits: Array<{ requestId?: string }> = [];
+    const server = createCapabilityServer({
+      onAudit: (event) => {
+        audits.push(event);
+      },
+    });
+    server.register({
+      name: "search_blog",
+      description: "按关键词检索博客",
+      risk: "read",
+      schema: z.object({ query: z.string().min(1) }),
+      handler: async (args) => ({ hits: [args.query] }),
+    });
+
+    await server.call({
+      name: "search_blog",
+      args: { query: "a" },
+      actor: { role: "reader" },
+      requestId: "req-http-1",
+    });
+    await server.call({
+      name: "search_blog",
+      args: { query: "b" },
+      actor: { role: "reader" },
+    });
+
+    expect(audits[0]?.requestId).toBe("req-http-1");
+    expect(typeof audits[1]?.requestId).toBe("string");
+    expect(audits[1]?.requestId).not.toBe("req-http-1");
   });
 });

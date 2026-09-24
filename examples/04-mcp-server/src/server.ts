@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { z, type ZodTypeAny } from "zod";
 
 export type RiskLevel = "read" | "write";
@@ -26,6 +27,7 @@ export type AuditEvent = {
   ok: boolean;
   reason?: string;
   durationMs: number;
+  requestId: string;
 };
 
 export type CapabilityServerOptions = {
@@ -35,12 +37,17 @@ export type CapabilityServerOptions = {
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+function withTimeout<T>(
+  run: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
   return new Promise<T>((resolve, reject) => {
+    const controller = new AbortController();
     const timer = setTimeout(() => {
+      controller.abort();
       reject(new Error("timeout"));
     }, timeoutMs);
-    void promise.then(
+    void run(controller.signal).then(
       (value) => {
         clearTimeout(timer);
         resolve(value);
@@ -58,7 +65,7 @@ export type RegisteredTool<TArgs, TResult> = {
   description: string;
   risk: RiskLevel;
   schema: z.ZodType<TArgs>;
-  handler: (args: TArgs) => Promise<TResult>;
+  handler: (args: TArgs, ctx: { signal: AbortSignal }) => Promise<TResult>;
 };
 
 function jsonSchemaFromZod(schema: ZodTypeAny): Record<string, unknown> {
@@ -134,8 +141,12 @@ export function createCapabilityServer(options: CapabilityServerOptions = {}) {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   assert(timeoutMs > 0, "timeoutMs 必须 > 0");
 
-  function audit(event: Omit<AuditEvent, "durationMs">, startedAt: number): void {
-    options.onAudit?.({ ...event, durationMs: Date.now() - startedAt });
+  function audit(
+    event: Omit<AuditEvent, "durationMs" | "requestId">,
+    startedAt: number,
+    requestId: string,
+  ): void {
+    options.onAudit?.({ ...event, durationMs: Date.now() - startedAt, requestId });
   }
 
   return {
@@ -197,23 +208,25 @@ export function createCapabilityServer(options: CapabilityServerOptions = {}) {
       name: string;
       args: unknown;
       actor: { role: ActorRole };
+      requestId?: string;
     }): Promise<CallResult<T>> {
       const startedAt = Date.now();
+      const requestId = callOptions.requestId ?? randomUUID();
       const base = { kind: "tool" as const, name: callOptions.name, role: callOptions.actor.role };
       const tool = tools.get(callOptions.name);
       if (!tool) {
-        audit({ ...base, ok: false, reason: "not_found" }, startedAt);
+        audit({ ...base, ok: false, reason: "not_found" }, startedAt, requestId);
         return { ok: false, reason: "not_found" };
       }
 
       if (!canCall(callOptions.actor.role, tool.risk)) {
-        audit({ ...base, ok: false, reason: "forbidden" }, startedAt);
+        audit({ ...base, ok: false, reason: "forbidden" }, startedAt, requestId);
         return { ok: false, reason: "forbidden" };
       }
 
       const parsed = tool.schema.safeParse(callOptions.args);
       if (!parsed.success) {
-        audit({ ...base, ok: false, reason: "invalid_args" }, startedAt);
+        audit({ ...base, ok: false, reason: "invalid_args" }, startedAt, requestId);
         return {
           ok: false,
           reason: "invalid_args",
@@ -223,17 +236,17 @@ export function createCapabilityServer(options: CapabilityServerOptions = {}) {
 
       try {
         const data = (await withTimeout(
-          tool.handler(parsed.data),
+          (signal) => tool.handler(parsed.data, { signal }),
           timeoutMs,
         )) as T;
-        audit({ ...base, ok: true }, startedAt);
+        audit({ ...base, ok: true }, startedAt, requestId);
         return { ok: true, data };
       } catch (error) {
         if (error instanceof Error && error.message === "timeout") {
-          audit({ ...base, ok: false, reason: "timeout" }, startedAt);
+          audit({ ...base, ok: false, reason: "timeout" }, startedAt, requestId);
           return { ok: false, reason: "timeout" };
         }
-        audit({ ...base, ok: false, reason: "handler_error" }, startedAt);
+        audit({ ...base, ok: false, reason: "handler_error" }, startedAt, requestId);
         throw error;
       }
     },
@@ -241,8 +254,10 @@ export function createCapabilityServer(options: CapabilityServerOptions = {}) {
     async readResource(readOptions: {
       uri: string;
       actor: { role: ActorRole };
+      requestId?: string;
     }): Promise<CallResult<string>> {
       const startedAt = Date.now();
+      const requestId = readOptions.requestId ?? randomUUID();
       const base = {
         kind: "resource" as const,
         name: readOptions.uri,
@@ -250,25 +265,25 @@ export function createCapabilityServer(options: CapabilityServerOptions = {}) {
       };
       const resource = resources.get(readOptions.uri);
       if (!resource) {
-        audit({ ...base, ok: false, reason: "not_found" }, startedAt);
+        audit({ ...base, ok: false, reason: "not_found" }, startedAt, requestId);
         return { ok: false, reason: "not_found" };
       }
 
       if (!canCall(readOptions.actor.role, resource.risk)) {
-        audit({ ...base, ok: false, reason: "forbidden" }, startedAt);
+        audit({ ...base, ok: false, reason: "forbidden" }, startedAt, requestId);
         return { ok: false, reason: "forbidden" };
       }
 
       try {
-        const data = await withTimeout(resource.read(), timeoutMs);
-        audit({ ...base, ok: true }, startedAt);
+        const data = await withTimeout(() => resource.read(), timeoutMs);
+        audit({ ...base, ok: true }, startedAt, requestId);
         return { ok: true, data };
       } catch (error) {
         if (error instanceof Error && error.message === "timeout") {
-          audit({ ...base, ok: false, reason: "timeout" }, startedAt);
+          audit({ ...base, ok: false, reason: "timeout" }, startedAt, requestId);
           return { ok: false, reason: "timeout" };
         }
-        audit({ ...base, ok: false, reason: "handler_error" }, startedAt);
+        audit({ ...base, ok: false, reason: "handler_error" }, startedAt, requestId);
         throw error;
       }
     },
@@ -277,8 +292,10 @@ export function createCapabilityServer(options: CapabilityServerOptions = {}) {
       name: string;
       args: unknown;
       actor: { role: ActorRole };
+      requestId?: string;
     }): Promise<CallResult<{ messages: PromptMessage[] }>> {
       const startedAt = Date.now();
+      const requestId = promptOptions.requestId ?? randomUUID();
       const base = {
         kind: "prompt" as const,
         name: promptOptions.name,
@@ -286,18 +303,18 @@ export function createCapabilityServer(options: CapabilityServerOptions = {}) {
       };
       const prompt = prompts.get(promptOptions.name);
       if (!prompt) {
-        audit({ ...base, ok: false, reason: "not_found" }, startedAt);
+        audit({ ...base, ok: false, reason: "not_found" }, startedAt, requestId);
         return { ok: false, reason: "not_found" };
       }
 
       if (!canCall(promptOptions.actor.role, prompt.risk)) {
-        audit({ ...base, ok: false, reason: "forbidden" }, startedAt);
+        audit({ ...base, ok: false, reason: "forbidden" }, startedAt, requestId);
         return { ok: false, reason: "forbidden" };
       }
 
       const parsed = prompt.schema.safeParse(promptOptions.args);
       if (!parsed.success) {
-        audit({ ...base, ok: false, reason: "invalid_args" }, startedAt);
+        audit({ ...base, ok: false, reason: "invalid_args" }, startedAt, requestId);
         return {
           ok: false,
           reason: "invalid_args",
@@ -306,15 +323,15 @@ export function createCapabilityServer(options: CapabilityServerOptions = {}) {
       }
 
       try {
-        const messages = await withTimeout(prompt.render(parsed.data), timeoutMs);
-        audit({ ...base, ok: true }, startedAt);
+        const messages = await withTimeout(() => prompt.render(parsed.data), timeoutMs);
+        audit({ ...base, ok: true }, startedAt, requestId);
         return { ok: true, data: { messages } };
       } catch (error) {
         if (error instanceof Error && error.message === "timeout") {
-          audit({ ...base, ok: false, reason: "timeout" }, startedAt);
+          audit({ ...base, ok: false, reason: "timeout" }, startedAt, requestId);
           return { ok: false, reason: "timeout" };
         }
-        audit({ ...base, ok: false, reason: "handler_error" }, startedAt);
+        audit({ ...base, ok: false, reason: "handler_error" }, startedAt, requestId);
         throw error;
       }
     },
