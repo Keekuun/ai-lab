@@ -2,7 +2,7 @@
 
 对应 [29 RAG 数据管道与评测](../../docs/29-rag-data-and-evaluation.md)、[11 RAG 进阶](../../docs/11-advanced-rag-patterns.md)。
 
-验收：改分块策略后，Recall@K 和引用命中率有数字；证据不足必须拒答，引用只能来自本次检索。
+验收：改分块策略后，Recall@K、Precision@K、MRR 和引用命中率有数字；证据不足必须拒答，引用只能来自本次检索。
 
 ## 前置条件
 
@@ -27,10 +27,14 @@ pnpm --filter @ai-lab/02-rag-evaluation start
   "chunker": "heading",
   "k": 2,
   "recallAtK": 1,
+  "precisionAtK": 0.25,
+  "mrr": 0.25,
   "citationHitRate": 1,
   "abstainAccuracy": 1
 }
 ```
+
+切太碎时 Recall@2 掉到 0.5，Precision 和 MRR 直接归零——后两者对「噪声块挤占前排」更敏感。
 
 问「NVIDIA 今日股价」时语料没有证据，必须拒答且 citations 为空。
 

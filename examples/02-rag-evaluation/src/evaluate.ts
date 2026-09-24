@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { answerFromChunks } from "./answer.js";
-import { citationHit, recallAtK } from "./metrics.js";
+import { citationHit, mrr, precisionAtK, recallAtK } from "./metrics.js";
 import { retrieveLexical } from "./retrieve.js";
 import type { Document, RagCase, RagEvalResult, Chunk } from "./types.js";
 
@@ -23,6 +23,8 @@ export async function evaluateRag(options: {
   const chunks = options.chunker(options.documents);
   const retrieve = options.retrieve ?? retrieveLexical;
   let recallSum = 0;
+  let precisionSum = 0;
+  let mrrSum = 0;
   let citationSum = 0;
   let abstainCorrect = 0;
 
@@ -30,6 +32,8 @@ export async function evaluateRag(options: {
     const retrieved = await retrieve(chunks, ragCase.question, options.k);
     const answer = answerFromChunks(ragCase.question, retrieved);
     recallSum += recallAtK(retrieved, ragCase.relevantSources, options.k);
+    precisionSum += precisionAtK(retrieved, ragCase.relevantSources, options.k);
+    mrrSum += mrr(retrieved, ragCase.relevantSources);
     citationSum += citationHit(answer, retrieved, ragCase.relevantSources) ? 1 : 0;
     if (answer.abstained === Boolean(ragCase.shouldAbstain)) {
       abstainCorrect += 1;
@@ -39,6 +43,8 @@ export async function evaluateRag(options: {
   const total = options.cases.length;
   return {
     recallAtK: recallSum / total,
+    precisionAtK: precisionSum / total,
+    mrr: mrrSum / total,
     citationHitRate: citationSum / total,
     abstainAccuracy: abstainCorrect / total,
   };

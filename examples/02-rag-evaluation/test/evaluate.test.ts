@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { answerFromChunks } from "../src/answer.js";
 import { chunkByFixedSize, chunkByHeading } from "../src/chunk.js";
 import { evaluateRag } from "../src/evaluate.js";
-import { citationHit, recallAtK } from "../src/metrics.js";
+import { citationHit, mrr, precisionAtK, recallAtK } from "../src/metrics.js";
 import { retrieveLexical } from "../src/retrieve.js";
 import { corpus, goldenCases } from "../src/corpus.js";
 import type { Chunk, RagAnswer } from "../src/types.js";
@@ -29,6 +29,28 @@ describe("recallAtK", () => {
 
   it("相关 source 被挤出前 K 记 0", () => {
     expect(recallAtK([noiseChunk], ["lcel.md"], 1)).toBe(0);
+  });
+});
+
+describe("precisionAtK", () => {
+  it("前 K 个结果里相关 chunk 的占比", () => {
+    expect(precisionAtK([lcelChunk, noiseChunk], ["lcel.md"], DEFAULT_TOP_K)).toBe(0.5);
+  });
+
+  it("全部相关记 1，全部无关记 0", () => {
+    expect(precisionAtK([lcelChunk], ["lcel.md"], 1)).toBe(1);
+    expect(precisionAtK([noiseChunk, noiseChunk], ["lcel.md"], DEFAULT_TOP_K)).toBe(0);
+  });
+});
+
+describe("mrr", () => {
+  it("第一个相关结果排第 1 记 1，排第 3 记 1/3", () => {
+    expect(mrr([lcelChunk, noiseChunk], ["lcel.md"])).toBe(1);
+    expect(mrr([noiseChunk, noiseChunk, lcelChunk], ["lcel.md"])).toBeCloseTo(1 / 3);
+  });
+
+  it("没有相关结果记 0", () => {
+    expect(mrr([noiseChunk], ["lcel.md"])).toBe(0);
   });
 });
 
@@ -88,6 +110,8 @@ describe("evaluateRag", () => {
     });
 
     expect(heading.recallAtK).toBeGreaterThan(tiny.recallAtK);
+    expect(heading.precisionAtK).toBeGreaterThan(tiny.precisionAtK);
+    expect(heading.mrr).toBeGreaterThan(tiny.mrr);
     expect(heading.citationHitRate).toBeGreaterThan(0);
     expect(heading.abstainAccuracy).toBe(1);
   });

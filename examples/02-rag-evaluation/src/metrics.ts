@@ -15,6 +15,28 @@ export function recallAtK(
   return relevantSources.some((source) => topSources.has(source)) ? 1 : 0;
 }
 
+export function precisionAtK(
+  retrieved: Chunk[],
+  relevantSources: string[],
+  k: number,
+): number {
+  assert(k >= 1, "k 必须 >= 1");
+  const top = retrieved.slice(0, k);
+  if (top.length === 0) {
+    return 0;
+  }
+
+  const relevant = new Set(relevantSources);
+  const hits = top.filter((chunk) => relevant.has(chunk.source)).length;
+  return hits / top.length;
+}
+
+export function mrr(retrieved: Chunk[], relevantSources: string[]): number {
+  const relevant = new Set(relevantSources);
+  const rank = retrieved.findIndex((chunk) => relevant.has(chunk.source));
+  return rank === -1 ? 0 : 1 / (rank + 1);
+}
+
 export function citationHit(
   answer: RagAnswer,
   retrieved: Chunk[],

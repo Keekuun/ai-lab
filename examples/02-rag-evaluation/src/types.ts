@@ -31,6 +31,8 @@ export type RagAnswer = {
 
 export type RagEvalResult = {
   recallAtK: number;
+  precisionAtK: number;
+  mrr: number;
   citationHitRate: number;
   abstainAccuracy: number;
 };
