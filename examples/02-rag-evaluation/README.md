@@ -9,7 +9,7 @@
 - Node.js 22+
 - 在仓库根目录执行过 `pnpm install`
 
-默认不需要 API Key。测试用注入的假向量；CLI 不填 Key 走词项检索，填了 `OPENAI_API_KEY` 才打 `/embeddings`。
+默认不需要 API Key。测试用注入的假向量；CLI 不填 Key 走词项检索，填了 `OPENAI_API_KEY` 才打 `/embeddings`，并额外输出 词项 / 纯向量 / 混合（RRF）三种检索方案的对比。
 
 ## 启动
 
@@ -50,6 +50,7 @@ pnpm --filter @ai-lab/02-rag-evaluation start
 
 - 这是评测实验，不是生产向量库。
 - 词项检索会放大「重复词刷分」，这是刻意用来暴露分块问题，不代表线上应只用 BM25。
+- 混合检索用 RRF 融合词项与向量排名，不依赖任何一路的原始分数刻度；Rerank 需要模型，未在本实验内。
 - Golden 只有 2 条，用来证明指标会动；博客知识库仍需按 29 扩到 30 条。
 
 ## Token / 延迟 / 成本

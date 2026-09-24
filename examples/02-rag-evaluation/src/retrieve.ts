@@ -76,3 +76,48 @@ export function retrieveLexical(chunks: Chunk[], query: string, k: number): Chun
     .slice(0, k)
     .map((entry) => entry.chunk);
 }
+
+const DEFAULT_RRF_K = 60;
+
+function rankMap(ranked: Chunk[]): Map<string, number> {
+  const ranks = new Map<string, number>();
+  ranked.forEach((chunk, index) => {
+    ranks.set(chunk.chunkId, index + 1);
+  });
+  return ranks;
+}
+
+export async function retrieveHybrid(
+  chunks: Chunk[],
+  query: string,
+  k: number,
+  embed: EmbedText,
+  rrfK: number = DEFAULT_RRF_K,
+): Promise<Chunk[]> {
+  assert(k >= 1, "k 必须 >= 1");
+  assert(rrfK >= 1, "rrfK 必须 >= 1");
+
+  // 两路都取完整排名，单路漏掉的 chunk 在另一路仍能贡献分数
+  const lexicalRanks = rankMap(retrieveLexical(chunks, query, chunks.length));
+  const vectorRanks = rankMap(await retrieveEmbedded(chunks, query, chunks.length, embed));
+
+  const fused = chunks.map((chunk) => {
+    const lexicalRank = lexicalRanks.get(chunk.chunkId);
+    const vectorRank = vectorRanks.get(chunk.chunkId);
+    const score =
+      (lexicalRank === undefined ? 0 : 1 / (rrfK + lexicalRank)) +
+      (vectorRank === undefined ? 0 : 1 / (rrfK + vectorRank));
+    return { chunk, score };
+  });
+
+  return fused
+    .filter((entry) => entry.score > 0)
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+      return left.chunk.chunkId.localeCompare(right.chunk.chunkId);
+    })
+    .slice(0, k)
+    .map((entry) => entry.chunk);
+}

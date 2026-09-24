@@ -26,8 +26,8 @@ function loadDotEnv(fileName: string): void {
 
 loadDotEnv(".env");
 import { corpus, goldenCases } from "./corpus.js";
-import { evaluateRag } from "./evaluate.js";
-import { retrieveEmbedded, type EmbedText } from "./retrieve.js";
+import { evaluateRag, type RetrieveChunks } from "./evaluate.js";
+import { retrieveEmbedded, retrieveHybrid, retrieveLexical, type EmbedText } from "./retrieve.js";
 import type { RagEvalResult } from "./types.js";
 
 const DEFAULT_TOP_K = 2;
@@ -73,9 +73,10 @@ function createOpenAiEmbed(apiKey: string): EmbedText {
 }
 
 const apiKey = process.env.OPENAI_API_KEY;
-const retrieve = apiKey
+const embed = apiKey ? createOpenAiEmbed(apiKey) : undefined;
+const retrieve = embed
   ? (chunks: Parameters<typeof retrieveEmbedded>[0], query: string, k: number) =>
-      retrieveEmbedded(chunks, query, k, createOpenAiEmbed(apiKey))
+      retrieveEmbedded(chunks, query, k, embed)
   : undefined;
 
 const heading = await evaluateRag({
@@ -95,9 +96,29 @@ const tiny = await evaluateRag({
 });
 
 console.error(
-  apiKey
+  embed
     ? "使用 OpenAI embedding。同一组 golden：按标题切 vs 切太碎。"
     : "未设置 OPENAI_API_KEY，使用词项检索。同一组 golden：按标题切 vs 切太碎。",
 );
 printResult("heading", heading);
 printResult(`fixed-${TINY_CHUNK_SIZE}`, tiny);
+
+if (embed) {
+  // 29 实践任务：同一分块下比较 词项 / 纯向量 / 混合（RRF）三种检索
+  const plans: Array<{ label: string; retrieve: RetrieveChunks }> = [
+    { label: "lexical", retrieve: retrieveLexical },
+    { label: "vector", retrieve: (chunks, query, k) => retrieveEmbedded(chunks, query, k, embed) },
+    { label: "hybrid-rrf", retrieve: (chunks, query, k) => retrieveHybrid(chunks, query, k, embed) },
+  ];
+  console.error("按标题分块，三种检索方案对比：");
+  for (const plan of plans) {
+    const result = await evaluateRag({
+      documents: corpus,
+      cases: goldenCases,
+      chunker: chunkByHeading,
+      k: DEFAULT_TOP_K,
+      retrieve: plan.retrieve,
+    });
+    printResult(plan.label, result);
+  }
+}
