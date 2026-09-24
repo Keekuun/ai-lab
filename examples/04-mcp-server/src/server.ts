@@ -15,9 +15,43 @@ export type CallResult<T> =
   | { ok: true; data: T }
   | {
       ok: false;
-      reason: "invalid_args" | "forbidden" | "not_found";
+      reason: "invalid_args" | "forbidden" | "not_found" | "timeout";
       error?: string;
     };
+
+export type AuditEvent = {
+  kind: "tool" | "resource" | "prompt";
+  name: string;
+  role: ActorRole;
+  ok: boolean;
+  reason?: string;
+  durationMs: number;
+};
+
+export type CapabilityServerOptions = {
+  timeoutMs?: number;
+  onAudit?: (event: AuditEvent) => void;
+};
+
+const DEFAULT_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("timeout"));
+    }, timeoutMs);
+    void promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
+}
 
 export type RegisteredTool<TArgs, TResult> = {
   name: string;
@@ -93,10 +127,16 @@ export function canCall(role: ActorRole, risk: RiskLevel): boolean {
   return role === "writer";
 }
 
-export function createCapabilityServer() {
+export function createCapabilityServer(options: CapabilityServerOptions = {}) {
   const tools = new Map<string, RegisteredTool<unknown, unknown>>();
   const resources = new Map<string, RegisteredResource>();
   const prompts = new Map<string, CapabilityPrompt<unknown>>();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  assert(timeoutMs > 0, "timeoutMs 必须 > 0");
+
+  function audit(event: Omit<AuditEvent, "durationMs">, startedAt: number): void {
+    options.onAudit?.({ ...event, durationMs: Date.now() - startedAt });
+  }
 
   return {
     register<TArgs, TResult>(tool: RegisteredTool<TArgs, TResult>): void {
@@ -153,22 +193,27 @@ export function createCapabilityServer() {
       }));
     },
 
-    async call<T>(options: {
+    async call<T>(callOptions: {
       name: string;
       args: unknown;
       actor: { role: ActorRole };
     }): Promise<CallResult<T>> {
-      const tool = tools.get(options.name);
+      const startedAt = Date.now();
+      const base = { kind: "tool" as const, name: callOptions.name, role: callOptions.actor.role };
+      const tool = tools.get(callOptions.name);
       if (!tool) {
+        audit({ ...base, ok: false, reason: "not_found" }, startedAt);
         return { ok: false, reason: "not_found" };
       }
 
-      if (!canCall(options.actor.role, tool.risk)) {
+      if (!canCall(callOptions.actor.role, tool.risk)) {
+        audit({ ...base, ok: false, reason: "forbidden" }, startedAt);
         return { ok: false, reason: "forbidden" };
       }
 
-      const parsed = tool.schema.safeParse(options.args);
+      const parsed = tool.schema.safeParse(callOptions.args);
       if (!parsed.success) {
+        audit({ ...base, ok: false, reason: "invalid_args" }, startedAt);
         return {
           ok: false,
           reason: "invalid_args",
@@ -176,43 +221,83 @@ export function createCapabilityServer() {
         };
       }
 
-      const data = (await tool.handler(parsed.data)) as T;
-      return { ok: true, data };
+      try {
+        const data = (await withTimeout(
+          tool.handler(parsed.data),
+          timeoutMs,
+        )) as T;
+        audit({ ...base, ok: true }, startedAt);
+        return { ok: true, data };
+      } catch (error) {
+        if (error instanceof Error && error.message === "timeout") {
+          audit({ ...base, ok: false, reason: "timeout" }, startedAt);
+          return { ok: false, reason: "timeout" };
+        }
+        audit({ ...base, ok: false, reason: "handler_error" }, startedAt);
+        throw error;
+      }
     },
 
-    async readResource(options: {
+    async readResource(readOptions: {
       uri: string;
       actor: { role: ActorRole };
     }): Promise<CallResult<string>> {
-      const resource = resources.get(options.uri);
+      const startedAt = Date.now();
+      const base = {
+        kind: "resource" as const,
+        name: readOptions.uri,
+        role: readOptions.actor.role,
+      };
+      const resource = resources.get(readOptions.uri);
       if (!resource) {
+        audit({ ...base, ok: false, reason: "not_found" }, startedAt);
         return { ok: false, reason: "not_found" };
       }
 
-      if (!canCall(options.actor.role, resource.risk)) {
+      if (!canCall(readOptions.actor.role, resource.risk)) {
+        audit({ ...base, ok: false, reason: "forbidden" }, startedAt);
         return { ok: false, reason: "forbidden" };
       }
 
-      const data = await resource.read();
-      return { ok: true, data };
+      try {
+        const data = await withTimeout(resource.read(), timeoutMs);
+        audit({ ...base, ok: true }, startedAt);
+        return { ok: true, data };
+      } catch (error) {
+        if (error instanceof Error && error.message === "timeout") {
+          audit({ ...base, ok: false, reason: "timeout" }, startedAt);
+          return { ok: false, reason: "timeout" };
+        }
+        audit({ ...base, ok: false, reason: "handler_error" }, startedAt);
+        throw error;
+      }
     },
 
-    async getPrompt(options: {
+    async getPrompt(promptOptions: {
       name: string;
       args: unknown;
       actor: { role: ActorRole };
     }): Promise<CallResult<{ messages: PromptMessage[] }>> {
-      const prompt = prompts.get(options.name);
+      const startedAt = Date.now();
+      const base = {
+        kind: "prompt" as const,
+        name: promptOptions.name,
+        role: promptOptions.actor.role,
+      };
+      const prompt = prompts.get(promptOptions.name);
       if (!prompt) {
+        audit({ ...base, ok: false, reason: "not_found" }, startedAt);
         return { ok: false, reason: "not_found" };
       }
 
-      if (!canCall(options.actor.role, prompt.risk)) {
+      if (!canCall(promptOptions.actor.role, prompt.risk)) {
+        audit({ ...base, ok: false, reason: "forbidden" }, startedAt);
         return { ok: false, reason: "forbidden" };
       }
 
-      const parsed = prompt.schema.safeParse(options.args);
+      const parsed = prompt.schema.safeParse(promptOptions.args);
       if (!parsed.success) {
+        audit({ ...base, ok: false, reason: "invalid_args" }, startedAt);
         return {
           ok: false,
           reason: "invalid_args",
@@ -220,8 +305,18 @@ export function createCapabilityServer() {
         };
       }
 
-      const messages = await prompt.render(parsed.data);
-      return { ok: true, data: { messages } };
+      try {
+        const messages = await withTimeout(prompt.render(parsed.data), timeoutMs);
+        audit({ ...base, ok: true }, startedAt);
+        return { ok: true, data: { messages } };
+      } catch (error) {
+        if (error instanceof Error && error.message === "timeout") {
+          audit({ ...base, ok: false, reason: "timeout" }, startedAt);
+          return { ok: false, reason: "timeout" };
+        }
+        audit({ ...base, ok: false, reason: "handler_error" }, startedAt);
+        throw error;
+      }
     },
   };
 }

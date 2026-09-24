@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { createCapabilityServer } from "./server.js";
+import { createCapabilityServer, type CapabilityServerOptions } from "./server.js";
 
-export function createBlogCapabilities() {
-  const server = createCapabilityServer();
+export function createBlogCapabilities(options?: CapabilityServerOptions) {
+  const server = createCapabilityServer(options);
 
   server.register({
     name: "search_blog",

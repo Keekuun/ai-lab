@@ -35,7 +35,7 @@ tags:
 1. 写一个只读 Resource Server。本仓库 04 已暴露 `blog://posts/welcome`。
 2. 增加带 Zod Schema 的 Tool。
 3. 编写最小 Client，发现能力并调用 Tool。本仓库 04 已用内存传输、stdio 和 Streamable HTTP 跑通这一步。
-4. 增加鉴权、日志、错误映射和超时。04 的 HTTP 入口可用 Bearer token 映射 reader/writer；03 的 `runTool` 可包住 MCP `callTool`。
+4. 增加鉴权、日志、错误映射和超时。04 的 HTTP 入口可用 Bearer token 映射 reader/writer，能力层带超时和 `onAudit` 审计回调；03 的 `runTool` 可包住 MCP `callTool`。
 5. 将现有 `ToolRegistry` 适配为 MCP Server。
 
 ## 设计原则

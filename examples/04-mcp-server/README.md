@@ -2,7 +2,7 @@
 
 对应 [31 MCP 与 Agent 协议](../../docs/31-mcp-and-agent-protocols.md)、[09 Tools](../../docs/09-tools-system-design.md)。
 
-验收：Client 能发现 Tool、只读 Resource 和 Prompt；非法参数在执行前拒绝；reader 不能调用 write Tool。
+验收：Client 能发现 Tool、只读 Resource 和 Prompt；非法参数在执行前拒绝；reader 不能调用 write Tool；handler 超时返回 `timeout` 不拖死调用方；每次调用写审计日志（角色、名称、耗时、结果）。
 
 ## 前置条件
 
@@ -21,6 +21,8 @@ pnpm --filter @ai-lab/04-mcp-server http
 ```
 
 `stdio` 只在 stdin/stdout 上讲 MCP。日志不能打到 stdout。`http` 默认监听 `http://127.0.0.1:3333/mcp`，用 `PORT` 改端口。未配 token 时角色用 `MCP_ACTOR_ROLE=reader|writer`（默认 writer）。成对设置 `MCP_HTTP_READER_TOKEN` / `MCP_HTTP_WRITER_TOKEN` 后，每次请求必须带 `Authorization: Bearer <token>`，角色由 token 决定。Cursor / Claude 可把 `stdio` 或该 HTTP 地址配成 MCP Server。HTTP 按会话分配 `mcp-session-id`，同一进程可接多个 Client。
+
+能力层带护栏：handler 默认 10 秒超时（`createCapabilityServer({ timeoutMs })` 可调），超时返回 `{ ok: false, reason: "timeout" }`；每次 Tool / Resource / Prompt 调用都会触发 `onAudit` 回调，stdio 和 HTTP 入口把审计事件打到 stderr。
 
 ## 输入 / 输出
 
@@ -44,6 +46,8 @@ pnpm --filter @ai-lab/04-mcp-server http
 ## 已知限制
 
 - stdio 和 Streamable HTTP 已接好，不要复制一套业务 handler。HTTP 只绑 `127.0.0.1`；Bearer token 不是 OAuth。
+- 超时只保证调用方按时返回，handler 内部的异步任务不会被真正取消。
+- 审计日志是内存回调，不是持久化 Trace；多租户字段（用户、租户 ID）还没进事件。
 - JSON Schema 只覆盖本实验用到的 `z.object` 字符串字段。
 - 鉴权是角色枚举，不是 OAuth / 租户隔离。
 

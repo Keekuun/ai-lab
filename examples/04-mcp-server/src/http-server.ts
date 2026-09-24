@@ -85,7 +85,11 @@ export async function startHttpMcpServer(options: {
     assert(options.tokens.reader !== options.tokens.writer, "reader 和 writer token 不能相同");
   }
 
-  const capabilities = createBlogCapabilities();
+  const capabilities = createBlogCapabilities({
+    onAudit: (event) => {
+      console.error(`audit ${JSON.stringify(event)}`);
+    },
+  });
   const sessions = new Map<string, HttpSession>();
 
   const httpServer = createServer((request, response) => {

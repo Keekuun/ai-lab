@@ -2,8 +2,14 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createBlogCapabilities } from "./blog-capabilities.js";
 import { connectCapabilityOverMcp } from "./mcp-adapter.js";
+import type { AuditEvent } from "./server.js";
 
-const server = createBlogCapabilities();
+const audits: AuditEvent[] = [];
+const server = createBlogCapabilities({
+  onAudit: (event) => {
+    audits.push(event);
+  },
+});
 
 const discovered = server.listCapabilities();
 const invalid = await server.call({
@@ -57,6 +63,7 @@ console.log(
       mcpSearch: searched,
       mcpWelcome: welcome,
       mcpSummarize: summarized,
+      audits,
     },
     null,
     2,

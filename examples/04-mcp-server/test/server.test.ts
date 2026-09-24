@@ -183,4 +183,92 @@ describe("createCapabilityServer", () => {
     expect(invalid).toMatchObject({ ok: false, reason: "invalid_args" });
     expect(renderCalls).toBe(1);
   });
+
+  it("handler 超过 timeoutMs 返回 timeout，不拖死调用方", async () => {
+    const server = createCapabilityServer({ timeoutMs: 20 });
+    server.register({
+      name: "slow_search",
+      description: "会卡住的检索",
+      risk: "read",
+      schema: z.object({ query: z.string().min(1) }),
+      handler: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        return { hits: [] };
+      },
+    });
+
+    const startedAt = Date.now();
+    const result = await server.call({
+      name: "slow_search",
+      args: { query: "mcp" },
+      actor: { role: "reader" },
+    });
+
+    expect(Date.now() - startedAt).toBeLessThan(1000);
+    expect(result).toMatchObject({ ok: false, reason: "timeout" });
+  });
+
+  it("onAudit 记录每次调用的角色、名称、耗时和结果", async () => {
+    const audits: unknown[] = [];
+    const server = createCapabilityServer({
+      onAudit: (event) => {
+        audits.push(event);
+      },
+    });
+    server.register({
+      name: "search_blog",
+      description: "按关键词检索博客",
+      risk: "read",
+      schema: z.object({ query: z.string().min(1) }),
+      handler: async (args) => ({ hits: [args.query] }),
+    });
+    server.register({
+      name: "publish_post",
+      description: "发布一篇博客",
+      risk: "write",
+      schema: z.object({ title: z.string().min(1) }),
+      handler: async (args) => ({ id: "post-1", title: args.title }),
+    });
+
+    await server.call({
+      name: "search_blog",
+      args: { query: "mcp" },
+      actor: { role: "reader" },
+    });
+    await server.call({
+      name: "search_blog",
+      args: { query: "" },
+      actor: { role: "reader" },
+    });
+    await server.call({
+      name: "publish_post",
+      args: { title: "x" },
+      actor: { role: "reader" },
+    });
+
+    expect(audits).toHaveLength(3);
+    expect(audits[0]).toMatchObject({
+      kind: "tool",
+      name: "search_blog",
+      role: "reader",
+      ok: true,
+    });
+    expect(audits[1]).toMatchObject({
+      kind: "tool",
+      name: "search_blog",
+      role: "reader",
+      ok: false,
+      reason: "invalid_args",
+    });
+    expect(audits[2]).toMatchObject({
+      kind: "tool",
+      name: "publish_post",
+      role: "reader",
+      ok: false,
+      reason: "forbidden",
+    });
+    for (const event of audits) {
+      expect(typeof (event as { durationMs: number }).durationMs).toBe("number");
+    }
+  });
 });
