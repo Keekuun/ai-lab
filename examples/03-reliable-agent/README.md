@@ -2,7 +2,7 @@
 
 对应 [30 Agent 可靠性与安全](../../docs/30-agent-reliability-and-security.md)、[18 上线 Checklist](../../docs/18-agent-production-checklist.md)。
 
-验收：Tool 超时可恢复；高风险操作要审批；同一幂等键重放不会重复扣款或发信；连续失败达到阈值后熔断，冷却期内不再执行 handler；字符串输出超过 `maxOutputChars` 被截断并标记 `truncated`；设 `LEDGER_PATH` 后账本落盘，重启进程再重放同一幂等键仍不重复扣款。
+验收：Tool 超时可恢复；高风险操作要审批；同一幂等键重放不会重复扣款或发信；连续失败达到阈值后熔断，冷却期内不再执行 handler；字符串输出超过 `maxOutputChars` 被截断并标记 `truncated`；设 `LEDGER_PATH` 后账本落盘，重启进程再重放同一幂等键仍不重复扣款；20 条注入/越权样本回归全过（伪造审批、越权声明被拦，注入文本只被当作数据）。
 
 ## 前置条件
 
@@ -20,7 +20,7 @@ pnpm --filter @ai-lab/03-reliable-agent start
 
 ## 输入 / 输出
 
-演示依次跑：超时搜索、失败两次后恢复、未审批扣款、审批后扣款、同一 `pay-o-1` 再扣一次、连续失败后熔断。
+演示依次跑：超时搜索、失败两次后恢复、未审批扣款、审批后扣款、同一 `pay-o-1` 再扣一次、连续失败后熔断，最后跑 20 条注入/越权样本回归。
 
 ```json
 {
@@ -28,11 +28,12 @@ pnpm --filter @ai-lab/03-reliable-agent start
   "denied": { "ok": false, "reason": "needs_approval" },
   "charges": 1,
   "circuitOpen": { "ok": false, "reason": "circuit_open" },
-  "downCalls": 2
+  "downCalls": 2,
+  "injectionRegression": { "total": 20, "passed": 20 }
 }
 ```
 
-`charges` 必须是 1。第二次扣款命中账本，不再执行 `execute`。熔断后 `downCalls` 停在 2：第三次调用被熔断器拦下，handler 没再执行。
+`charges` 必须是 1。第二次扣款命中账本，不再执行 `execute`。熔断后 `downCalls` 停在 2：第三次调用被熔断器拦下，handler 没再执行。注入回归按 30 的防线设计：审批只信显式 `approved` 参数，权限不看内容，工具输出只是数据——所以「文本声称已批准」「工具返回里藏指令」都不会改变护栏行为。
 
 ## 模型配置
 

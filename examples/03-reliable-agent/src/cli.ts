@@ -3,6 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createMcpTool } from "./mcp-tool.js";
+import { injectionSamples, runInjectionRegression } from "./injection-samples.js";
 import { createPersistentLedger } from "./persistent-ledger.js";
 import { createCircuitBreaker, runTool, type AuditEvent, type Ledger } from "./run-tool.js";
 
@@ -152,6 +153,22 @@ const circuitOpen = await runTool({
 });
 
 console.error("超时、重试、审批、幂等账本、熔断。MCP Tool 也走同一套 runTool。");
+
+// 30 实践任务 3：注入与越权样本回归
+const verdicts = await runInjectionRegression(injectionSamples);
+const injectionRegression = {
+  total: verdicts.length,
+  passed: verdicts.filter((verdict) => verdict.passed).length,
+  byCategory: Object.fromEntries(
+    [...new Set(verdicts.map((verdict) => verdict.category))].map((category) => [
+      category,
+      verdicts.filter((verdict) => verdict.category === category && verdict.passed).length +
+        "/" +
+        verdicts.filter((verdict) => verdict.category === category).length,
+    ]),
+  ),
+};
+
 console.log(
   JSON.stringify(
     {
@@ -164,6 +181,7 @@ console.log(
       mcpSearch,
       circuitOpen,
       downCalls,
+      injectionRegression,
       audit,
     },
     null,
