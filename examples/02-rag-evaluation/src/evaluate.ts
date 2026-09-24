@@ -8,6 +8,7 @@ export type RetrieveChunks = (
   chunks: Chunk[],
   query: string,
   k: number,
+  visibleTo?: string,
 ) => Chunk[] | Promise<Chunk[]>;
 
 export async function evaluateRag(options: {
@@ -29,7 +30,7 @@ export async function evaluateRag(options: {
   let abstainCorrect = 0;
 
   for (const ragCase of options.cases) {
-    const retrieved = await retrieve(chunks, ragCase.question, options.k);
+    const retrieved = await retrieve(chunks, ragCase.question, options.k, ragCase.asRole);
     const answer = answerFromChunks(ragCase.question, retrieved);
     recallSum += recallAtK(retrieved, ragCase.relevantSources, options.k);
     precisionSum += precisionAtK(retrieved, ragCase.relevantSources, options.k);

@@ -26,7 +26,9 @@ function loadDotEnv(fileName: string): void {
 
 loadDotEnv(".env");
 import { corpus, goldenCases } from "./corpus.js";
+import { loadDocsCorpus } from "./docs-corpus.js";
 import { evaluateRag, type RetrieveChunks } from "./evaluate.js";
+import { blogFixtures, blogGoldenCases } from "./golden-blog.js";
 import { retrieveEmbedded, retrieveHybrid, retrieveLexical, type EmbedText } from "./retrieve.js";
 import type { RagEvalResult } from "./types.js";
 
@@ -120,5 +122,39 @@ if (embed) {
       retrieve: plan.retrieve,
     });
     printResult(plan.label, result);
+  }
+}
+
+// --blog：在真实博客语料（docs/ + 边界 fixtures）上跑 30 条 golden
+if (process.argv.includes("--blog")) {
+  const blogDocuments = [
+    ...loadDocsCorpus(resolve(import.meta.dirname, "../../../docs")),
+    ...blogFixtures,
+  ];
+  const blogK = 5;
+  const blogPlans: Array<{ label: string; retrieve?: RetrieveChunks }> = [
+    { label: "blog-lexical" },
+    ...(embed
+      ? [
+          {
+            label: "blog-hybrid-rrf",
+            retrieve: ((chunks, query, k, visibleTo) =>
+              retrieveHybrid(chunks, query, k, embed, visibleTo)) as RetrieveChunks,
+          },
+        ]
+      : []),
+  ];
+  console.error(`博客知识库：${blogDocuments.length} 篇文档，${blogGoldenCases.length} 条 golden，K=${blogK}`);
+  for (const plan of blogPlans) {
+    const result = await evaluateRag({
+      documents: blogDocuments,
+      cases: blogGoldenCases,
+      chunker: chunkByHeading,
+      k: blogK,
+      retrieve: plan.retrieve,
+    });
+    console.log(
+      JSON.stringify({ chunker: "heading", plan: plan.label, k: blogK, ...result }, null, 2),
+    );
   }
 }

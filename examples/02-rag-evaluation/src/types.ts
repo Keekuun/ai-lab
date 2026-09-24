@@ -1,12 +1,14 @@
 export type Document = {
   source: string;
   text: string;
+  visibility?: string[];
 };
 
 export type Chunk = {
   chunkId: string;
   source: string;
   text: string;
+  visibility?: string[];
 };
 
 export type RagCase = {
@@ -15,6 +17,7 @@ export type RagCase = {
   relevantSources: string[];
   expectedPoints: string[];
   shouldAbstain?: boolean;
+  asRole?: string;
 };
 
 export type Citation = {

@@ -9,6 +9,7 @@ function toChunks(document: Document, pieces: string[]): Chunk[] {
       chunkId: `${document.source}#${index}`,
       source: document.source,
       text,
+      visibility: document.visibility,
     }));
 }
 
