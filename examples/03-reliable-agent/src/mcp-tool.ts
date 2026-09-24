@@ -5,20 +5,20 @@ export type McpCallClient = {
   callTool: (request: {
     name: string;
     arguments?: Record<string, unknown>;
-  }) => Promise<{
-    isError?: boolean;
-    content?: Array<{ type?: string; text?: string }>;
-  }>;
+  }) => Promise<unknown>;
 };
 
-function textFromMcpResult(result: {
-  isError?: boolean;
-  content?: Array<{ type?: string; text?: string }>;
-}): string {
-  const text = (result.content ?? [])
-    .map((part) => part.text ?? "")
+function textFromMcpResult(result: unknown): string {
+  // MCP 返回不可信：运行时收窄，而不是信 SDK 类型
+  assert(typeof result === "object" && result !== null, "MCP 返回必须是对象");
+  const { isError, content } = result as {
+    isError?: boolean;
+    content?: Array<{ type?: string; text?: string }>;
+  };
+  const text = (Array.isArray(content) ? content : [])
+    .map((part) => (typeof part?.text === "string" ? part.text : ""))
     .join("");
-  if (result.isError) {
+  if (isError) {
     throw new Error(text || "MCP tool returned isError");
   }
   return text;

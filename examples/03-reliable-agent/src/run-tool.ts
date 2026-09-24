@@ -7,6 +7,7 @@ export type AuditOutcome =
   | "timeout"
   | "error"
   | "needs_approval"
+  | "circuit_open"
   | "retried";
 
 export type AuditEvent = {
@@ -20,7 +21,7 @@ export type Ledger = Map<string, unknown>;
 
 export type ToolResult<T> =
   | { ok: true; data: T }
-  | { ok: false; reason: "timeout" | "needs_approval" | "error"; error?: string };
+  | { ok: false; reason: "timeout" | "needs_approval" | "circuit_open" | "error"; error?: string };
 
 export type ToolDefinition<T> = {
   name: string;
@@ -31,6 +32,47 @@ export type ToolDefinition<T> = {
 };
 
 const DEFAULT_MAX_RETRIES = 1;
+
+export type CircuitState = "closed" | "open" | "half_open";
+
+export type CircuitBreaker = {
+  readonly failureThreshold: number;
+  readonly cooldownMs: number;
+  state: CircuitState;
+  consecutiveFailures: number;
+  openedAt: number;
+  readonly now: () => number;
+};
+
+export function createCircuitBreaker(options: {
+  failureThreshold: number;
+  cooldownMs: number;
+  now?: () => number;
+}): CircuitBreaker {
+  assert(options.failureThreshold >= 1, "failureThreshold 必须 >= 1");
+  assert(options.cooldownMs >= 1, "cooldownMs 必须 >= 1");
+  return {
+    failureThreshold: options.failureThreshold,
+    cooldownMs: options.cooldownMs,
+    state: "closed",
+    consecutiveFailures: 0,
+    openedAt: 0,
+    now: options.now ?? Date.now,
+  };
+}
+
+function onCircuitSuccess(breaker: CircuitBreaker): void {
+  breaker.state = "closed";
+  breaker.consecutiveFailures = 0;
+}
+
+function onCircuitFailure(breaker: CircuitBreaker): void {
+  breaker.consecutiveFailures += 1;
+  if (breaker.consecutiveFailures >= breaker.failureThreshold) {
+    breaker.state = "open";
+    breaker.openedAt = breaker.now();
+  }
+}
 
 class TimeoutError extends Error {
   constructor(timeoutMs: number) {
@@ -87,6 +129,7 @@ export async function runTool<T>(options: {
   idempotencyKey?: string;
   ledger?: Ledger;
   audit: AuditEvent[];
+  circuitBreaker?: CircuitBreaker;
 }): Promise<ToolResult<T>> {
   assert(options.requestId.trim().length > 0, "requestId 不能为空");
   assert(options.tool.name.trim().length > 0, "tool.name 不能为空");
@@ -103,6 +146,16 @@ export async function runTool<T>(options: {
     };
   }
 
+  const breaker = options.circuitBreaker;
+  if (breaker?.state === "open") {
+    if (breaker.now() - breaker.openedAt < breaker.cooldownMs) {
+      record(options.audit, options.requestId, options.tool, "circuit_open");
+      return { ok: false, reason: "circuit_open" };
+    }
+    // 冷却期过后放行一次试探
+    breaker.state = "half_open";
+  }
+
   const maxRetries = options.tool.maxRetries ?? DEFAULT_MAX_RETRIES;
   assert(maxRetries >= 1, "maxRetries 必须 >= 1");
 
@@ -115,6 +168,9 @@ export async function runTool<T>(options: {
       if (options.idempotencyKey && options.ledger) {
         options.ledger.set(options.idempotencyKey, data);
       }
+      if (breaker) {
+        onCircuitSuccess(breaker);
+      }
       record(options.audit, options.requestId, options.tool, "ok");
       return { ok: true, data };
     } catch (error) {
@@ -122,6 +178,9 @@ export async function runTool<T>(options: {
       if (attempt < maxRetries) {
         record(options.audit, options.requestId, options.tool, "retried");
         continue;
+      }
+      if (breaker) {
+        onCircuitFailure(breaker);
       }
       record(
         options.audit,

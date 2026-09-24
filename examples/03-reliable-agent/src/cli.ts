@@ -3,7 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createMcpTool } from "./mcp-tool.js";
-import { runTool, type AuditEvent, type Ledger } from "./run-tool.js";
+import { createCircuitBreaker, runTool, type AuditEvent, type Ledger } from "./run-tool.js";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -125,7 +125,29 @@ const mcpSearch = await runTool({
 });
 await mcpClient.close();
 
-console.error("超时、重试、审批、幂等账本。MCP Tool 也走同一套 runTool。");
+// 熔断：连续失败 2 次后打开，第三次调用不再执行 handler
+const breaker = createCircuitBreaker({ failureThreshold: 2, cooldownMs: 60_000 });
+let downCalls = 0;
+const downTool = {
+  name: "always_down",
+  risk: "read" as const,
+  maxRetries: 1,
+  execute: async (): Promise<string> => {
+    downCalls += 1;
+    throw new Error("service down");
+  },
+};
+await runTool({ requestId: "demo-cb-1", tool: downTool, args: {}, audit, circuitBreaker: breaker });
+await runTool({ requestId: "demo-cb-2", tool: downTool, args: {}, audit, circuitBreaker: breaker });
+const circuitOpen = await runTool({
+  requestId: "demo-cb-3",
+  tool: downTool,
+  args: {},
+  audit,
+  circuitBreaker: breaker,
+});
+
+console.error("超时、重试、审批、幂等账本、熔断。MCP Tool 也走同一套 runTool。");
 console.log(
   JSON.stringify(
     {
@@ -136,6 +158,8 @@ console.log(
       replayed,
       charges,
       mcpSearch,
+      circuitOpen,
+      downCalls,
       audit,
     },
     null,

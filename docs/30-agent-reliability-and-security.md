@@ -17,7 +17,7 @@ tags:
 >
 > **边界：** 本篇管运行时护栏和注入威胁模型。Tool 业务设计见 [09](./09-tools-system-design.md)，上线勾选表见 [18](./18-agent-production-checklist.md)。
 >
-> **配套实验：** [03 可靠 Agent](./examples.md#03-可靠-agent) — 超时、重试、审批；MCP Tool 也走同一套护栏。
+> **配套实验：** [03 可靠 Agent](./examples.md#03-可靠-agent) — 超时、重试、审批、熔断；MCP Tool 也走同一套护栏。
 
 ## 先区分三类系统
 
