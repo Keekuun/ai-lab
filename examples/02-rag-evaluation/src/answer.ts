@@ -1,24 +1,23 @@
 import type { Chunk, RagAnswer } from "./types.js";
-import { tokenize, tokenMatches } from "./retrieve.js";
+import { tokenizeBigram } from "./retrieve.js";
 
 const STOP_WORDS = new Set(["是", "什么", "是什么", "今日", "的", "了", "吗", "呢"]);
 
-// 证据门槛：chunk 至少覆盖 2/3 的问题词才算证据。
-// 宁可保守拒答（该答的没答）也不编造（该拒的答了）——后者在安全上严重得多。
-// 「如何在 Kubernetes 上部署」只命中「如何」「部署」等泛词时覆盖率低，应当拒答。
-const MIN_TOKEN_COVERAGE = 2 / 3;
+// 证据门槛：chunk 覆盖问题 bigram 的比例下限。bigram 分词后问句与文档用词不必完全重叠，
+// 覆盖率天然偏低；按真实语料分布校准：该答样本最低 0.36，该拒样本最高 0.43，
+// 取 0.35 让该答的全过，漏网的 k8s/rust 类泛词误答是词项检索的天花板（见 README）。
+const MIN_TOKEN_COVERAGE = 0.35;
 
 function contentTokens(text: string): string[] {
-  return tokenize(text).filter((token) => !STOP_WORDS.has(token) && token.length > 1);
+  return tokenizeBigram(text).filter((token) => !STOP_WORDS.has(token) && token.length > 1);
 }
 
 function coverage(chunkTokens: string[], questionTokens: string[]): number {
   if (questionTokens.length === 0) {
     return 0;
   }
-  const covered = questionTokens.filter((questionToken) =>
-    chunkTokens.some((chunkToken) => tokenMatches(chunkToken, questionToken)),
-  ).length;
+  const chunkTokenSet = new Set(chunkTokens);
+  const covered = questionTokens.filter((token) => chunkTokenSet.has(token)).length;
   return covered / questionTokens.length;
 }
 

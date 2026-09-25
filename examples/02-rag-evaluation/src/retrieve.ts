@@ -5,20 +5,32 @@ export function tokenize(text: string): string[] {
   return text.toLowerCase().match(/[a-z0-9]+|[\u4e00-\u9fff]+/g) ?? [];
 }
 
-// 演示级分词按连续中文切段，用双向子串匹配近似子词命中：
-// 「薪资」命中「薪资计算」，长问句「内部薪资级别系数怎么算」命中「内部薪资」
-export function tokenMatches(chunkToken: string, queryToken: string): boolean {
-  const shorter = chunkToken.length <= queryToken.length ? chunkToken : queryToken;
-  if (shorter.length < 2) {
-    return chunkToken === queryToken;
+// 中文按二字滑动窗口切 bigram，英文/数字保持整词。
+// 解决「薪资计算」整段成 token、打不中「薪资」的问题；bigram 后用精确匹配即可。
+export function tokenizeBigram(text: string): string[] {
+  const segments = tokenize(text);
+  const tokens: string[] = [];
+  for (const segment of segments) {
+    if (/^[a-z0-9]+$/.test(segment) || segment.length === 1) {
+      tokens.push(segment);
+    } else {
+      for (let index = 0; index < segment.length - 1; index += 1) {
+        tokens.push(segment.slice(index, index + 2));
+      }
+    }
   }
-  return chunkToken.includes(queryToken) || queryToken.includes(chunkToken);
+  return tokens;
 }
 
+// BM25 式词频饱和：tf/(tf+k1)。词频有贡献但不过度——
+// noise 重复 pipe 仍能刷分赢过 LCEL（教学点保留），但真实语料里高频长文不会霸榜。
+const BM25_K1 = 1.2;
+
 function scoreChunk(chunk: Chunk, queryTokens: string[]): number {
-  const chunkTokens = tokenize(chunk.text);
+  const chunkTokens = tokenizeBigram(chunk.text);
   return queryTokens.reduce((score, token) => {
-    return score + chunkTokens.filter((chunkToken) => tokenMatches(chunkToken, token)).length;
+    const tf = chunkTokens.filter((chunkToken) => chunkToken === token).length;
+    return score + (tf === 0 ? 0 : tf / (tf + BM25_K1));
   }, 0);
 }
 
@@ -88,7 +100,7 @@ export function retrieveLexical(
   assert(k >= 1, "k 必须 >= 1");
   assert(query.trim().length > 0, "query 不能为空");
 
-  const queryTokens = tokenize(query);
+  const queryTokens = tokenizeBigram(query);
   return [...chunks]
     .filter((chunk) => isVisible(chunk, visibleTo))
     .map((chunk) => ({ chunk, score: scoreChunk(chunk, queryTokens) }))

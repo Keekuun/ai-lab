@@ -52,9 +52,9 @@ describe("博客知识库评测基线", () => {
     });
 
     // 基线校准（当前实际值见 README）：阈值只防退化，不代表指标够好。
-    // 词项检索在 70+ 篇真实语料上召回有限，这正是换 embedding/混合检索的动机。
-    expect(result.recallAtK).toBeGreaterThanOrEqual(0.5);
-    expect(result.abstainAccuracy).toBeGreaterThanOrEqual(0.7);
+    // bigram + BM25 饱和后的基线：Recall@5 ≈ 0.83，拒答 ≈ 0.93。
+    expect(result.recallAtK).toBeGreaterThanOrEqual(0.8);
+    expect(result.abstainAccuracy).toBeGreaterThanOrEqual(0.9);
   });
 
   it("权限样本：受限文档对 public 不可见，对 hr 可见", async () => {
