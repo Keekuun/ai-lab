@@ -30,7 +30,7 @@ import { loadDocsCorpus } from "./docs-corpus.js";
 import { evaluateRag, type RetrieveChunks } from "./evaluate.js";
 import { blogFixtures, blogGoldenCases } from "./golden-blog.js";
 import { retrieveEmbedded, retrieveHybrid, retrieveLexical, type EmbedText } from "./retrieve.js";
-import type { RagEvalResult } from "./types.js";
+import type { Chunk, RagEvalResult } from "./types.js";
 
 const DEFAULT_TOP_K = 2;
 const TINY_CHUNK_SIZE = 12;
@@ -155,6 +155,104 @@ if (process.argv.includes("--blog")) {
     });
     console.log(
       JSON.stringify({ chunker: "heading", plan: plan.label, k: blogK, ...result }, null, 2),
+    );
+  }
+}
+
+// --ollama：接本地 Ollama 跑真实 LLM 全链路——检索（词项/混合）+ 生成（gemma4）+ LLM 评判。
+// 用法：tsx src/cli.ts --ollama [--limit N]；需先 ollama serve 并拉取 gemma4 与 bge-m3。
+if (process.argv.includes("--ollama")) {
+  const { answerWithLlm, ANSWER_JSON_SCHEMA } = await import("./llm-answer.js");
+  const { judgeAnswerRelevance, JUDGE_JSON_SCHEMA } = await import("./llm-judge.js");
+  const { createOllamaClient } = await import("./ollama.js");
+  const { withEmbeddingCache } = await import("./retrieve.js");
+
+  const client = createOllamaClient({});
+  if (!(await client.isReachable())) {
+    console.error(`连不上 Ollama（${client.host}）。先运行：brew services start ollama`);
+    process.exit(1);
+  }
+
+  // --limit N：取前 N 条 golden 做快速冒烟
+  const limitIndex = process.argv.indexOf("--limit");
+  const limit = limitIndex >= 0 ? Number(process.argv[limitIndex + 1]) : undefined;
+  const ollamaCases =
+    limit !== undefined && Number.isInteger(limit) && limit > 0
+      ? blogGoldenCases.slice(0, limit)
+      : blogGoldenCases;
+
+  const generateJson = (prompt: string) =>
+    client.generate(prompt, { schema: ANSWER_JSON_SCHEMA, think: false });
+  const answer = (question: string, chunks: Chunk[]) => answerWithLlm(question, chunks, generateJson);
+  const judge = (question: string, answerText: string, points: string[]) =>
+    judgeAnswerRelevance(question, answerText, points, (prompt) =>
+      client.generate(prompt, { schema: JUDGE_JSON_SCHEMA, think: false }),
+    );
+
+  const blogDocuments = [
+    ...loadDocsCorpus(resolve(import.meta.dirname, "../../../docs")),
+    ...blogFixtures,
+  ];
+  const blogK = 5;
+
+  // 向量模型可用才跑混合检索；先切块并预热向量缓存（限流 8 路），
+  // 否则 retrieveEmbedded 会对几百个 chunk 同时打满 Ollama。
+  const tags = (await (await fetch(`${client.host}/api/tags`)).json()) as {
+    models?: Array<{ name: string }>;
+  };
+  const hasEmbedModel = Boolean(tags.models?.some((m) => m.name.startsWith(client.embedModel)));
+  const cachedEmbed = withEmbeddingCache((text) => client.embed(text));
+  const plans: Array<{ label: string; retrieve: RetrieveChunks }> = [
+    { label: "ollama-lexical", retrieve: retrieveLexical },
+  ];
+  let preChunked: Chunk[] | undefined;
+  if (hasEmbedModel) {
+    preChunked = chunkByHeading(blogDocuments);
+    const CONCURRENCY = 8;
+    for (let start = 0; start < preChunked.length; start += CONCURRENCY) {
+      await Promise.all(preChunked.slice(start, start + CONCURRENCY).map((chunk) => cachedEmbed(chunk.text)));
+      if ((start / CONCURRENCY) % 10 === 0) {
+        console.error(`[ollama] 向量预热 ${Math.min(start + CONCURRENCY, preChunked.length)}/${preChunked.length}`);
+      }
+    }
+    plans.push({
+      label: "ollama-hybrid-rrf",
+      retrieve: ((chunks, query, k, visibleTo) =>
+        retrieveHybrid(chunks, query, k, cachedEmbed, visibleTo)) as RetrieveChunks,
+    });
+  } else {
+    console.error(`未找到向量模型 ${client.embedModel}，只跑词项检索。ollama pull ${client.embedModel} 后可跑混合检索。`);
+  }
+
+  console.error(
+    `[ollama] 模型 ${client.model}，向量 ${hasEmbedModel ? client.embedModel : "无"}，` +
+      `${blogDocuments.length} 篇文档，${ollamaCases.length} 条 golden，K=${blogK}`,
+  );
+  for (const plan of plans) {
+    const startedAt = Date.now();
+    const result = await evaluateRag({
+      documents: blogDocuments,
+      cases: ollamaCases,
+      chunker: preChunked ? () => preChunked : chunkByHeading,
+      k: blogK,
+      retrieve: plan.retrieve,
+      answer,
+      judge,
+      onCase: (index, total, caseId) =>
+        console.error(`[ollama] ${plan.label} ${index}/${total} ${caseId}`),
+    });
+    console.log(
+      JSON.stringify(
+        {
+          plan: plan.label,
+          model: client.model,
+          k: blogK,
+          seconds: Math.round((Date.now() - startedAt) / 1000),
+          ...result,
+        },
+        null,
+        2,
+      ),
     );
   }
 }

@@ -17,7 +17,7 @@ tags:
 >
 > **边界：** 本篇管索引质量和 Recall。检索策略见 [11](./11-advanced-rag-patterns.md)，Agent 端到端回归见 [22](./22-agent-eval-regression.md)。
 >
-> **配套实验：** [02 RAG 评测](./examples.md#02-rag-评测) — 改分块后看 Recall@K、Precision@K、MRR；检索可换成注入的 embedding，证据不足必须拒答。`--blog` 模式在 docs/ 真实语料上跑 30 条 golden（含权限、旧文档、恶意文档样本）。
+> **配套实验：** [02 RAG 评测](./examples.md#02-rag-评测) — 改分块后看 Recall@K、Precision@K、MRR；检索可换成注入的 embedding，证据不足必须拒答。`--blog` 模式在 docs/ 真实语料上跑 30 条 golden（含权限、旧文档、恶意文档样本）；`--ollama` 模式接本地 Ollama 跑真实 LLM 全链路（gemma4 生成 + bge-m3 向量 + LLM 评判答案相关性），混合检索 Recall@5 达 0.97。
 
 ## 数据管道
 

@@ -56,6 +56,22 @@ function scoreChunk(chunk: Chunk, queryTokens: string[], idf: Map<string, number
 
 export type EmbedText = (text: string) => Promise<number[]>;
 
+// 向量缓存：retrieveEmbedded 每个 query 都会重算全部 chunk 向量，
+// 对真实 embedding 服务（Ollama/OpenAI）这是几百次重复请求。按文本记忆化后，
+// 整个评测跑下来每个 chunk 只 embed 一次。
+export function withEmbeddingCache(embed: EmbedText): EmbedText {
+  const cache = new Map<string, Promise<number[]>>();
+  return (text) => {
+    const hit = cache.get(text);
+    if (hit) {
+      return hit;
+    }
+    const pending = embed(text);
+    cache.set(text, pending);
+    return pending;
+  };
+}
+
 // 29：查询时执行权限过滤。visibility 为空表示所有人可见；否则任一角色匹配即可见
 function isVisible(chunk: Chunk, visibleTo?: string): boolean {
   if (!chunk.visibility || chunk.visibility.length === 0) {

@@ -11,12 +11,22 @@
 
 默认不需要 API Key。测试用注入的假向量；CLI 不填 Key 走词项检索，填了 `OPENAI_API_KEY` 才打 `/embeddings`，并额外输出 词项 / 纯向量 / 混合（RRF）三种检索方案的对比。
 
+有本地 [Ollama](https://ollama.com) 时可以跑真实 LLM 全链路（生成用 `gemma4`，向量用 `bge-m3`）：
+
+```bash
+brew services start ollama        # 或 ollama serve
+ollama pull gemma4                # 生成模型
+ollama pull bge-m3                # 中文向量模型（没有则只跑词项检索）
+```
+
 ## 启动
 
 ```bash
 pnpm --filter @ai-lab/02-rag-evaluation test
 pnpm --filter @ai-lab/02-rag-evaluation start
 pnpm --filter @ai-lab/02-rag-evaluation start -- --blog   # 真实语料 + 30 条 golden
+pnpm --filter @ai-lab/02-rag-evaluation start -- --ollama # 本地 Ollama：真实生成 + LLM 评判
+pnpm --filter @ai-lab/02-rag-evaluation start -- --ollama --limit 3  # 先跑 3 条冒烟
 ```
 
 ## 输入 / 输出
@@ -58,6 +68,27 @@ pnpm --filter @ai-lab/02-rag-evaluation start -- --blog   # 真实语料 + 30 �
 
 分词演进：连续中文整段成 token（Recall@5 = 0.53，「薪资」打不中「薪资计算」）→ bigram 二字滑动窗口（0.83）→ BM25 词频饱和 `tf/(tf+k1)` 防长文霸榜（拒答率 0.73 → 0.93）→ IDF 让罕见词压过泛词（MRR 0.43 → 0.51）。改检索器看指标动，正是 29 的调参方法。
 
+## 真实 LLM 全链路（--ollama）
+
+同一套 30 条 golden，检索/生成/评判全部换成真实模型（gemma4 生成 + bge-m3 向量，M4 本地跑，单方案约 7 分钟）：
+
+| 指标 | 启发式基线 | ollama-lexical | ollama-hybrid-rrf |
+|------|-----------|----------------|-------------------|
+| Recall@5 | 0.83 | 0.83 | **0.97** |
+| Precision@5 | 0.23 | 0.23 | 0.39 |
+| MRR | 0.51 | 0.51 | **0.66** |
+| 引用命中率 | 0.67 | **0.80** | 0.77 |
+| 拒答准确率 | 0.93 | 0.87 | **0.93** |
+| LLM 相关性 | — | 0.95 | **1.0** |
+
+三个真实结论：
+
+1. **中文向量检索明显赢过 bigram BM25**：bge-m3 混合检索把 Recall@5 从 0.83 推到 0.97、MRR 从 0.51 到 0.66——词项检索调参的天花板，语义检索轻松越过。
+2. **小模型裸输出不可靠，工程纪律三连才可用**：最初 `format:"json"` 下 24 条该答样本误拒 14 条（拒答准确率 0.53）。逐项修复：`think:false` 关思考模式（思考会在 JSON 里塞冗长 thought 字段导致截断）→ 不合规输出重试一次 → **schema 约束解码**（Ollama `format` 传 JSON Schema，根治「模型把答案组织成自由 JSON」）。最终误拒 14 → 4，剩下的基本是检索漏召回的合理拒答，拒答准确率回到 0.93，耗时还降了 7 倍（1476s → 431s）。
+3. **答得好和管得住嘴是两回事**：llmRelevance 0.95~1.0 说明该答的题目质量很高；但拒答纪律全靠输出工程兜底，不是模型自觉——这正是 30 护栏里「输出校验」存在的理由。
+
+集成测试（`test/ollama-integration.test.ts`）在本地有 Ollama 时跑真实模型，CI 上自动跳过，不影响流水线。
+
 ## 模型配置
 
 | 变量 | 说明 |
@@ -65,13 +96,16 @@ pnpm --filter @ai-lab/02-rag-evaluation start -- --blog   # 真实语料 + 30 �
 | `OPENAI_API_KEY` | 有值才打 embedding API |
 | `OPENAI_EMBEDDING_MODEL` | 默认 `text-embedding-3-small` |
 | `OPENAI_BASE_URL` | 默认 `https://api.openai.com/v1` |
+| `OLLAMA_HOST` | 默认 `http://localhost:11434` |
+| `OLLAMA_MODEL` | 生成模型，默认 `gemma4:latest` |
+| `OLLAMA_EMBED_MODEL` | 向量模型，默认 `bge-m3` |
 
 ## 已知限制
 
 - 这是评测实验，不是生产向量库。
 - 词项检索用词频饱和前的原始计数会放大「重复词刷分」（toy corpus 里 noise 赢过 LCEL），这是刻意保留的教学点；真实语料上已加 BM25 饱和。
-- 混合检索用 RRF 融合词项与向量排名，不依赖任何一路的原始分数刻度；Rerank 需要模型，未在本实验内。
-- 演示分词是 bigram 二字窗口，无 IDF 和词性权重；「如何在 Kubernetes 上部署」这类泛词多的问句仍可能误答（拒答率 0.93 不是 1.0）。生产应换 embedding + LLM 拒答判断。
+- 混合检索用 RRF 融合词项与向量排名，不依赖任何一路的原始分数刻度；Rerank 需要交叉编码器，bge-m3 是双编码器，未在本实验内。
+- 「如何在 Kubernetes 上部署」这类泛词多的问句仍可能误答（拒答率 0.93 不是 1.0）。实测换真实 LLM 判断反而更松（见上表），生产应叠加规则校验而非全靠模型自觉。
 - 权限过滤在检索层强制（`visibility` + `visibleTo`），answerer 层不做二次校验。
 
 ## Token / 延迟 / 成本

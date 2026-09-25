@@ -38,4 +38,6 @@ export type RagEvalResult = {
   mrr: number;
   citationHitRate: number;
   abstainAccuracy: number;
+  // 提供 judge 时才存在：LLM 评判的答案要点覆盖率（0..1），拒答样本不计入
+  llmRelevance?: number;
 };
