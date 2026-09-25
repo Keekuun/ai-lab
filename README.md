@@ -1,6 +1,6 @@
 # AI Lab
 
-> AI 学习笔记与实战项目 · 计划域名 [ai.zkkysqs.top](https://ai.zkkysqs.top)
+> AI 学习笔记与实战项目 · 站点 [ai.zkkysqs.top](https://ai.zkkysqs.top)
 
 从 [keekuun.github.io](https://github.com/Keekuun/keekuun.github.io) 的 `docs/ai/` 迁移而来，包含 **76 篇** AI Agent / RAG / LangChain / LangGraph / Mastra 系列笔记。本仓库 `examples/01`～`04` 已可跑：结构化输出、RAG 评测、可靠 Agent、MCP 能力发现。
 

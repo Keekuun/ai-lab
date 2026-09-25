@@ -15,6 +15,7 @@ export type AuditOutcome =
 export type AuditEvent = {
   requestId: string;
   toolName: string;
+  toolVersion?: string;
   risk: RiskLevel;
   outcome: AuditOutcome;
 };
@@ -32,6 +33,7 @@ export type ToolResult<T> =
 export type ToolDefinition<T> = {
   name: string;
   risk: RiskLevel;
+  version?: string;
   timeoutMs?: number;
   maxRetries?: number;
   maxOutputChars?: number;
@@ -82,22 +84,37 @@ function onCircuitFailure(breaker: CircuitBreaker): void {
   }
 }
 
-// 30 护栏：每次运行有最大步骤和最大成本。跨 runTool 调用共享，超预算拒绝执行。
+// 30 护栏：每次运行有最大步骤、最大耗时和最大成本。跨 runTool 调用共享，超预算拒绝执行。
 export type Budget = {
   readonly maxSteps: number;
   readonly maxCost?: number;
+  readonly maxDurationMs?: number;
+  readonly startedAt: number;
+  readonly now: () => number;
   usedSteps: number;
   usedCost: number;
 };
 
-export function createBudget(options: { maxSteps: number; maxCost?: number }): Budget {
+export function createBudget(options: {
+  maxSteps: number;
+  maxCost?: number;
+  maxDurationMs?: number;
+  now?: () => number;
+}): Budget {
   assert(options.maxSteps >= 1, "maxSteps 必须 >= 1");
   if (options.maxCost !== undefined) {
     assert(options.maxCost >= 0, "maxCost 必须 >= 0");
   }
+  if (options.maxDurationMs !== undefined) {
+    assert(options.maxDurationMs >= 1, "maxDurationMs 必须 >= 1");
+  }
+  const now = options.now ?? Date.now;
   return {
     maxSteps: options.maxSteps,
     maxCost: options.maxCost,
+    maxDurationMs: options.maxDurationMs,
+    startedAt: now(),
+    now,
     usedSteps: 0,
     usedCost: 0,
   };
@@ -106,7 +123,9 @@ export function createBudget(options: { maxSteps: number; maxCost?: number }): B
 function budgetExceeded(budget: Budget, cost: number): boolean {
   return (
     budget.usedSteps >= budget.maxSteps ||
-    (budget.maxCost !== undefined && budget.usedCost + cost > budget.maxCost)
+    (budget.maxCost !== undefined && budget.usedCost + cost > budget.maxCost) ||
+    (budget.maxDurationMs !== undefined &&
+      budget.now() - budget.startedAt >= budget.maxDurationMs)
   );
 }
 
@@ -120,12 +139,13 @@ class TimeoutError extends Error {
 function record(
   audit: AuditEvent[],
   requestId: string,
-  tool: { name: string; risk: RiskLevel },
+  tool: { name: string; risk: RiskLevel; version?: string },
   outcome: AuditOutcome,
 ): void {
   audit.push({
     requestId,
     toolName: tool.name,
+    toolVersion: tool.version,
     risk: tool.risk,
     outcome,
   });
