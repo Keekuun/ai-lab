@@ -142,6 +142,7 @@ export default defineConfig({
             { text: '29 RAG 数据与评测', link: '/29-rag-data-and-evaluation' },
             { text: '30 可靠性与安全', link: '/30-agent-reliability-and-security' },
             { text: '31 MCP 与协议', link: '/31-mcp-and-agent-protocols' },
+            { text: '32 ACP 与编辑器协议', link: '/32-acp-agent-client-protocol' },
           ],
         },
       ],

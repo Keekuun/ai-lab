@@ -188,8 +188,9 @@ flowchart TB
 | 29 | [RAG 数据管道与评测](./29-rag-data-and-evaluation.md) | 索引质量、召回指标、引用可信度 |
 | 30 | [Agent 可靠性与安全](./30-agent-reliability-and-security.md) | 重试、权限、注入、恢复和审计 |
 | 31 | [MCP 与 Agent 协议](./31-mcp-and-agent-protocols.md) | Tool 能力标准化和可组合集成 |
+| 32 | [ACP 与编辑器协议](./32-acp-agent-client-protocol.md) | 编辑器与 Agent 的标准握手、流式会话与权限 |
 
-推荐顺序：`28 → 29 → 30 → 31`。做 RAG 的读完 28 后先读 29；做工具型 Agent 的读完 28 后先读 30。
+推荐顺序：`28 → 29 → 30 → 31 → 32`。做 RAG 的读完 28 后先读 29；做工具型 Agent 的读完 28 后先读 30。
 
 ---
 
@@ -248,7 +249,7 @@ flowchart TB
 | hello-agent（08 配套） | 自研 ReAct + Express SSE |
 | [LG 12 Route 示例](./langgraph/12-full-route-example.md) | Next.js + LangGraph 骨架 |
 | [**blog-assistant**](./19-blog-ai-assistant-capstone.md) | 外部收官应用 `apps/blog-assistant`（**LangGraph 0.4.x / LC 0.3.x**，与专系列 v1 基准见各 README） |
-| [Examples](./examples.md) | 本仓库的可运行实验。01～04 均已可跑 |
+| [Examples](./examples.md) | 本仓库的可运行实验。01～05 均已可跑 |
 
 ---
 

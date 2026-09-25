@@ -20,6 +20,7 @@ pnpm test:examples
 | [02-rag-evaluation](https://github.com/Keekuun/ai-lab/tree/main/examples/02-rag-evaluation) | [29](./29-rag-data-and-evaluation.md) · [11](./11-advanced-rag-patterns.md) | Recall@K、Precision@K、MRR、引用命中率 | 可跑 |
 | [03-reliable-agent](https://github.com/Keekuun/ai-lab/tree/main/examples/03-reliable-agent) | [30](./30-agent-reliability-and-security.md) · [18](./18-agent-production-checklist.md) | 超时、重试、审批、熔断、审计 | 可跑 |
 | [04-mcp-server](https://github.com/Keekuun/ai-lab/tree/main/examples/04-mcp-server) | [31](./31-mcp-and-agent-protocols.md) · [09](./09-tools-system-design.md) | 能力发现、Schema、权限、Resource、Prompt、超时、审计、幂等、持久化 | 可跑 |
+| [05-acp-agent](https://github.com/Keekuun/ai-lab/tree/main/examples/05-acp-agent) | [32](./32-acp-agent-client-protocol.md) · [31](./31-mcp-and-agent-protocols.md) | 版本协商、流式 prompt turn、权限请求、取消 | 可跑 |
 
 ## 01 结构化输出
 
@@ -60,3 +61,13 @@ pnpm --filter @ai-lab/04-mcp-server http
 ```
 
 实验完成后再抽取共享包，避免过早设计通用框架。
+
+## 05 ACP Agent
+
+官方 ACP SDK 实现最小 agent：initialize 版本协商、session/prompt 流式回复、敏感操作 request_permission、session/cancel 真取消。测试用内存流对，不起进程；`--demo` 本地自连看消息流；stdio 模式可被 Zed 挂载；`--ollama` 让回复由本地 gemma4 流式生成。
+
+```bash
+pnpm --filter @ai-lab/05-acp-agent test
+pnpm --filter @ai-lab/05-acp-agent start -- --demo
+pnpm --filter @ai-lab/05-acp-agent start -- --demo --ollama
+```
