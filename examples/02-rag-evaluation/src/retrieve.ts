@@ -26,11 +26,31 @@ export function tokenizeBigram(text: string): string[] {
 // noise 重复 pipe 仍能刷分赢过 LCEL（教学点保留），但真实语料里高频长文不会霸榜。
 const BM25_K1 = 1.2;
 
-function scoreChunk(chunk: Chunk, queryTokens: string[]): number {
+// BM25 的另一半：IDF 让罕见词权重大、泛词权重小。
+// 标准变体 ln((N - df + 0.5) / (df + 0.5) + 1)，保证非负。
+export function idfMap(chunks: Chunk[]): Map<string, number> {
+  const documentFrequency = new Map<string, number>();
+  for (const chunk of chunks) {
+    for (const token of new Set(tokenizeBigram(chunk.text))) {
+      documentFrequency.set(token, (documentFrequency.get(token) ?? 0) + 1);
+    }
+  }
+  const total = chunks.length;
+  const idf = new Map<string, number>();
+  for (const [token, df] of documentFrequency) {
+    idf.set(token, Math.log((total - df + 0.5) / (df + 0.5) + 1));
+  }
+  return idf;
+}
+
+function scoreChunk(chunk: Chunk, queryTokens: string[], idf: Map<string, number>): number {
   const chunkTokens = tokenizeBigram(chunk.text);
   return queryTokens.reduce((score, token) => {
     const tf = chunkTokens.filter((chunkToken) => chunkToken === token).length;
-    return score + (tf === 0 ? 0 : tf / (tf + BM25_K1));
+    if (tf === 0) {
+      return score;
+    }
+    return score + (idf.get(token) ?? 0) * (tf / (tf + BM25_K1));
   }, 0);
 }
 
@@ -101,9 +121,10 @@ export function retrieveLexical(
   assert(query.trim().length > 0, "query 不能为空");
 
   const queryTokens = tokenizeBigram(query);
-  return [...chunks]
-    .filter((chunk) => isVisible(chunk, visibleTo))
-    .map((chunk) => ({ chunk, score: scoreChunk(chunk, queryTokens) }))
+  const visibleChunks = chunks.filter((chunk) => isVisible(chunk, visibleTo));
+  const idf = idfMap(visibleChunks);
+  return [...visibleChunks]
+    .map((chunk) => ({ chunk, score: scoreChunk(chunk, queryTokens, idf) }))
     .filter((entry) => entry.score > 0)
     .sort((left, right) => {
       if (right.score !== left.score) {

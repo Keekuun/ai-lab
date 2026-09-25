@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { chunkByFixedSize, chunkByHeading } from "../src/chunk.js";
+import { chunkByHeading } from "../src/chunk.js";
 import { corpus } from "../src/corpus.js";
 import { retrieveHybrid, retrieveLexical } from "../src/retrieve.js";
 import type { Chunk } from "../src/types.js";
 
-const TINY_CHUNK_SIZE = 12;
 const DEFAULT_TOP_K = 2;
 
 function fakeEmbed(text: string): Promise<number[]> {
@@ -38,19 +37,21 @@ describe("retrieveHybrid", () => {
     expect(retrieved[0]?.chunkId).toBe("a.md#0");
   });
 
-  it("切太碎时词项 Top-2 全是噪声，混合检索能捞回 LCEL", async () => {
-    const tinyChunks = chunkByFixedSize(corpus, TINY_CHUNK_SIZE);
-    const lexicalOnly = retrieveLexical(tinyChunks, "LCEL 是什么 pipe", DEFAULT_TOP_K);
-    expect(lexicalOnly.every((chunk) => chunk.source === "noise.md")).toBe(true);
+  it("混合检索融合两路：词项第一和向量第一都进结果", async () => {
+    // A：query 词高频（词项唯一命中）；B：向量第一，词项无命中；C：两路都无
+    const chunkA: Chunk = { chunkId: "a.md#0", source: "a.md", text: "部署 部署 部署 部署" };
+    const chunkB: Chunk = { chunkId: "b.md#0", source: "b.md", text: "语义相近的词" };
+    const chunkC: Chunk = { chunkId: "c.md#0", source: "c.md", text: "无关 内容" };
+    const embed = (text: string): Promise<number[]> =>
+      Promise.resolve(text.includes("语义") || text.includes("查询") ? [1, 0] : [0, 1]);
 
-    const hybrid = await retrieveHybrid(
-      tinyChunks,
-      "LCEL 是什么 pipe",
-      DEFAULT_TOP_K,
-      fakeEmbed,
-    );
+    const lexicalOnly = retrieveLexical([chunkA, chunkB, chunkC], "部署 查询", 2);
+    expect(lexicalOnly.some((chunk) => chunk.chunkId === "b.md#0")).toBe(false);
 
-    expect(hybrid.some((chunk) => chunk.source === "lcel.md")).toBe(true);
+    const hybrid = await retrieveHybrid([chunkA, chunkB, chunkC], "部署 查询", 2, embed);
+
+    expect(hybrid.some((chunk) => chunk.chunkId === "a.md#0")).toBe(true);
+    expect(hybrid.some((chunk) => chunk.chunkId === "b.md#0")).toBe(true);
   });
 
   it("按标题分块时混合检索与词项检索都能召回 LCEL", async () => {

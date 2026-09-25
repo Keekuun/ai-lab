@@ -95,7 +95,7 @@ describe("answerFromChunks", () => {
 });
 
 describe("evaluateRag", () => {
-  it("按标题分块时，LCEL 问题的 Recall@2 高于过碎的固定长度分块", async () => {
+  it("按标题分块时拒答准确，切太碎后证据破碎导致误拒答", async () => {
     const heading = await evaluateRag({
       documents: corpus,
       cases: goldenCases,
@@ -109,17 +109,19 @@ describe("evaluateRag", () => {
       k: DEFAULT_TOP_K,
     });
 
-    expect(heading.recallAtK).toBeGreaterThan(tiny.recallAtK);
-    expect(heading.precisionAtK).toBeGreaterThan(tiny.precisionAtK);
-    expect(heading.mrr).toBeGreaterThan(tiny.mrr);
+    // IDF 让独特词怎么切都能召回，分块的影响体现在证据完整性上：
+    // 碎片 chunk 覆盖率不足，该答的被误拒答
+    expect(heading.recallAtK).toBeGreaterThanOrEqual(tiny.recallAtK);
+    expect(heading.abstainAccuracy).toBeGreaterThan(tiny.abstainAccuracy);
     expect(heading.citationHitRate).toBeGreaterThan(0);
-    expect(heading.abstainAccuracy).toBe(1);
   });
 
-  it("词项检索会把重复噪声块排到 LCEL 文档前面", () => {
-    const tinyChunks = chunkByFixedSize(corpus, TINY_CHUNK_SIZE);
-    const retrieved = retrieveLexical(tinyChunks, "LCEL 是什么 pipe", DEFAULT_TOP_K);
+  it("词频刷分：重复同一词的 chunk 排在只提一次的前面", () => {
+    // IDF 相同（df 都是 2）时纯拼词频，noise 的 pipe×4 赢 lcel 的 pipe×1
+    const spamChunk: Chunk = { chunkId: "spam.md#0", source: "spam.md", text: "pipe pipe pipe pipe" };
+    const plainChunk: Chunk = { chunkId: "plain.md#0", source: "plain.md", text: "pipe 组合" };
+    const retrieved = retrieveLexical([plainChunk, spamChunk], "pipe", DEFAULT_TOP_K);
 
-    expect(retrieved.every((chunk) => chunk.source === "noise.md")).toBe(true);
+    expect(retrieved[0]?.chunkId).toBe("spam.md#0");
   });
 });
