@@ -5,7 +5,13 @@ import { z } from "zod";
 import { createMcpTool } from "./mcp-tool.js";
 import { injectionSamples, runInjectionRegression } from "./injection-samples.js";
 import { createPersistentLedger } from "./persistent-ledger.js";
-import { createCircuitBreaker, runTool, type AuditEvent, type Ledger } from "./run-tool.js";
+import {
+  createBudget,
+  createCircuitBreaker,
+  runTool,
+  type AuditEvent,
+  type Ledger,
+} from "./run-tool.js";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -152,7 +158,49 @@ const circuitOpen = await runTool({
   circuitBreaker: breaker,
 });
 
-console.error("超时、重试、审批、幂等账本、熔断。MCP Tool 也走同一套 runTool。");
+console.error("超时、重试、审批、幂等账本、熔断、预算、dry-run。MCP Tool 也走同一套 runTool。");
+
+// 预算：maxSteps=1，第二次调用被拦
+const budget = createBudget({ maxSteps: 1 });
+await runTool({
+  requestId: "demo-budget-1",
+  tool: { name: "step", risk: "read", execute: () => Promise.resolve("ok") },
+  args: {},
+  audit,
+  budget,
+});
+let budgetCalls = 0;
+const budgetExceeded = await runTool({
+  requestId: "demo-budget-2",
+  tool: {
+    name: "step",
+    risk: "read",
+    execute: async () => {
+      budgetCalls += 1;
+      return "unreachable";
+    },
+  },
+  args: {},
+  audit,
+  budget,
+});
+
+// dry-run：预览高风险操作，不真扣款
+const dryRunCharge = await runTool({
+  requestId: "demo-dry-run",
+  tool: {
+    name: "charge",
+    risk: "high",
+    execute: async () => {
+      charges += 1;
+      return { charged: 99 };
+    },
+  },
+  args: { orderId: "o-2" },
+  approved: true,
+  dryRun: true,
+  audit,
+});
 
 // 30 实践任务 3：注入与越权样本回归
 const verdicts = await runInjectionRegression(injectionSamples);
@@ -181,6 +229,9 @@ console.log(
       mcpSearch,
       circuitOpen,
       downCalls,
+      budgetExceeded,
+      budgetCalls,
+      dryRunCharge,
       injectionRegression,
       audit,
     },

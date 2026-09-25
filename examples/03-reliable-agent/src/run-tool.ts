@@ -8,6 +8,8 @@ export type AuditOutcome =
   | "error"
   | "needs_approval"
   | "circuit_open"
+  | "budget_exceeded"
+  | "dry_run"
   | "retried";
 
 export type AuditEvent = {
@@ -20,8 +22,12 @@ export type AuditEvent = {
 export type Ledger = Map<string, unknown>;
 
 export type ToolResult<T> =
-  | { ok: true; data: T; truncated?: boolean }
-  | { ok: false; reason: "timeout" | "needs_approval" | "circuit_open" | "error"; error?: string };
+  | { ok: true; data: T; truncated?: boolean; dryRun?: boolean }
+  | {
+      ok: false;
+      reason: "timeout" | "needs_approval" | "circuit_open" | "budget_exceeded" | "error";
+      error?: string;
+    };
 
 export type ToolDefinition<T> = {
   name: string;
@@ -29,6 +35,7 @@ export type ToolDefinition<T> = {
   timeoutMs?: number;
   maxRetries?: number;
   maxOutputChars?: number;
+  cost?: number;
   execute: (args: unknown) => Promise<T>;
 };
 
@@ -73,6 +80,34 @@ function onCircuitFailure(breaker: CircuitBreaker): void {
     breaker.state = "open";
     breaker.openedAt = breaker.now();
   }
+}
+
+// 30 护栏：每次运行有最大步骤和最大成本。跨 runTool 调用共享，超预算拒绝执行。
+export type Budget = {
+  readonly maxSteps: number;
+  readonly maxCost?: number;
+  usedSteps: number;
+  usedCost: number;
+};
+
+export function createBudget(options: { maxSteps: number; maxCost?: number }): Budget {
+  assert(options.maxSteps >= 1, "maxSteps 必须 >= 1");
+  if (options.maxCost !== undefined) {
+    assert(options.maxCost >= 0, "maxCost 必须 >= 0");
+  }
+  return {
+    maxSteps: options.maxSteps,
+    maxCost: options.maxCost,
+    usedSteps: 0,
+    usedCost: 0,
+  };
+}
+
+function budgetExceeded(budget: Budget, cost: number): boolean {
+  return (
+    budget.usedSteps >= budget.maxSteps ||
+    (budget.maxCost !== undefined && budget.usedCost + cost > budget.maxCost)
+  );
 }
 
 class TimeoutError extends Error {
@@ -131,6 +166,8 @@ export async function runTool<T>(options: {
   ledger?: Ledger;
   audit: AuditEvent[];
   circuitBreaker?: CircuitBreaker;
+  budget?: Budget;
+  dryRun?: boolean;
 }): Promise<ToolResult<T>> {
   assert(options.requestId.trim().length > 0, "requestId 不能为空");
   assert(options.tool.name.trim().length > 0, "tool.name 不能为空");
@@ -138,6 +175,12 @@ export async function runTool<T>(options: {
   if (options.tool.risk === "high" && options.approved !== true) {
     record(options.audit, options.requestId, options.tool, "needs_approval");
     return { ok: false, reason: "needs_approval" };
+  }
+
+  // dry-run：预览「如果要做会发生什么」。只读工具无副作用，照常执行
+  if (options.dryRun === true && options.tool.risk !== "read") {
+    record(options.audit, options.requestId, options.tool, "dry_run");
+    return { ok: true, data: undefined as T, dryRun: true };
   }
 
   if (options.idempotencyKey && options.ledger?.has(options.idempotencyKey)) {
@@ -155,6 +198,16 @@ export async function runTool<T>(options: {
     }
     // 冷却期过后放行一次试探
     breaker.state = "half_open";
+  }
+
+  const cost = options.tool.cost ?? 0;
+  if (options.budget && budgetExceeded(options.budget, cost)) {
+    record(options.audit, options.requestId, options.tool, "budget_exceeded");
+    return { ok: false, reason: "budget_exceeded" };
+  }
+  if (options.budget) {
+    options.budget.usedSteps += 1;
+    options.budget.usedCost += cost;
   }
 
   const maxRetries = options.tool.maxRetries ?? DEFAULT_MAX_RETRIES;
