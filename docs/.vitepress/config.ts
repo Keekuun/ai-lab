@@ -202,6 +202,12 @@ export default defineConfig({
         { text: '02 可扩展性', link: '/pi-ai/02-extensibility' },
         { text: '03 SDK 嵌入', link: '/pi-ai/03-sdk-embedding' },
       ],
+
+      '/deepseek-harness/': [
+        { text: 'DeepSeek Harness', link: '/deepseek-harness/' },
+        { text: '01 Cordis 插件系统', link: '/deepseek-harness/01-cordis-plugin-system' },
+        { text: '02 Harness 全景与落地', link: '/deepseek-harness/02-harness-overview' },
+      ],
     },
 
     socialLinks: [
