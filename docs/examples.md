@@ -21,6 +21,7 @@ pnpm test:examples
 | [03-reliable-agent](https://github.com/Keekuun/ai-lab/tree/main/examples/03-reliable-agent) | [30](./30-agent-reliability-and-security.md) · [18](./18-agent-production-checklist.md) | 超时、重试、审批、熔断、审计 | 可跑 |
 | [04-mcp-server](https://github.com/Keekuun/ai-lab/tree/main/examples/04-mcp-server) | [31](./31-mcp-and-agent-protocols.md) · [09](./09-tools-system-design.md) | 能力发现、Schema、权限、Resource、Prompt、超时、审计、幂等、持久化 | 可跑 |
 | [05-acp-agent](https://github.com/Keekuun/ai-lab/tree/main/examples/05-acp-agent) | [32](./32-acp-agent-client-protocol.md) · [31](./31-mcp-and-agent-protocols.md) | 版本协商、流式 prompt turn、权限请求、取消 | 可跑 |
+| [06-pi-agent](https://github.com/Keekuun/ai-lab/tree/main/examples/06-pi-agent) | [Pi 系列](./pi-ai/index.md) | pi-agent-core 事件循环、mock streamFn 单测、Ollama 工具调用 | 可跑 |
 
 ## 01 结构化输出
 

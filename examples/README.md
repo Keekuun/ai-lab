@@ -24,5 +24,6 @@ README 需要说明：前置条件、启动命令、输入输出示例、模型�
 | [`03-reliable-agent`](./03-reliable-agent/README.md) | Agent 可靠性与安全 | 超时、重试、审批、审计 |
 | [`04-mcp-server`](./04-mcp-server/README.md) | MCP 与 Agent 协议 | 能力发现、Schema、权限、Resource、Prompt、超时、审计、幂等、持久化 |
 | [`05-acp-agent`](./05-acp-agent/README.md) | ACP 与编辑器协议 | 版本协商、流式 prompt turn、权限请求、取消 |
+| [`06-pi-agent`](./06-pi-agent/README.md) | Pi agent 内核 + Ollama | 事件循环、mock streamFn、工具调用回传 |
 
 实验完成后再抽取共享包，避免过早设计通用框架。

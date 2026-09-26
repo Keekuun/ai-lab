@@ -201,6 +201,7 @@ flowchart TB
 | [LangChain.js](./langchain/index.md) | 16 | Runnable → Model → RAG → Eval | **v1** · 2026-06-11 · `langchain@1.4.6` | 减胶水、读 trace |
 | [LangGraph.js](./langgraph/index.md) | 13 | State → 图 → 流式 → 部署 | **1.x** · 2026-06-11 · `@langchain/langgraph@1.4.4` | 编排、checkpoint |
 | [Mastra.js](./mastra/index.md) | 8 | 实例 → Agent → Workflow → 部署 | **1.x** · 2026-06-11 · `@mastra/core@1.43.0` | TS 一体化、Studio |
+| [Pi 深度解析](./pi-ai/index.md) | 3 | 四层架构 → 扩展 → SDK 嵌入 | **0.x** · 2026-09-26 · `@mariozechner/pi-agent-core@0.73.1` | 极简内核、白盒嵌入 |
 
 各专系列 README 内有 **「版本基准与维护」** 表（npm 版本、与 `blog-assistant` 差异、维护清单）。框架大版本发布后请优先更新该表。
 

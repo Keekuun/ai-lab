@@ -195,6 +195,13 @@ export default defineConfig({
         { text: '07 Observability', link: '/mastra/07-observability-evals' },
         { text: '08 Next.js 集成', link: '/mastra/08-nextjs-integration' },
       ],
+
+      '/pi-ai/': [
+        { text: 'Pi 深度解析', link: '/pi-ai/' },
+        { text: '01 架构拆解', link: '/pi-ai/01-architecture' },
+        { text: '02 可扩展性', link: '/pi-ai/02-extensibility' },
+        { text: '03 SDK 嵌入', link: '/pi-ai/03-sdk-embedding' },
+      ],
     },
 
     socialLinks: [
