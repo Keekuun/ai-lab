@@ -26,5 +26,6 @@ README 需要说明：前置条件、启动命令、输入输出示例、模型�
 | [`05-acp-agent`](./05-acp-agent/README.md) | ACP 与编辑器协议 | 版本协商、流式 prompt turn、权限请求、取消 |
 | [`06-pi-agent`](./06-pi-agent/README.md) | Pi agent 内核 + Ollama | 事件循环、mock streamFn、工具调用回传 |
 | [`07-dsh-plugin`](./07-dsh-plugin/README.md) | DeepSeek Harness / Cordis | 服务、inject、effect 自动清理、事件 |
+| [`08-a2a-agent`](./08-a2a-agent/README.md) | A2A 与 Agent 互联 | AgentCard、任务生命周期、错误语义 |
 
 实验完成后再抽取共享包，避免过早设计通用框架。

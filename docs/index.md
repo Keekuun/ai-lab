@@ -189,8 +189,9 @@ flowchart TB
 | 30 | [Agent 可靠性与安全](./30-agent-reliability-and-security.md) | 重试、权限、注入、恢复和审计 |
 | 31 | [MCP 与 Agent 协议](./31-mcp-and-agent-protocols.md) | Tool 能力标准化和可组合集成 |
 | 32 | [ACP 与编辑器协议](./32-acp-agent-client-protocol.md) | 编辑器与 Agent 的标准握手、流式会话与权限 |
+| 33 | [A2A 与 Agent 互联](./33-a2a-agent-to-agent-protocol.md) | Agent 间发现、委托与任务状态机 |
 
-推荐顺序：`28 → 29 → 30 → 31 → 32`。做 RAG 的读完 28 后先读 29；做工具型 Agent 的读完 28 后先读 30。
+推荐顺序：`28 → 29 → 30 → 31 → 32 → 33`。做 RAG 的读完 28 后先读 29；做工具型 Agent 的读完 28 后先读 30；31→32→33 是协议三连（工具/编辑器/Agent 互联）。
 
 ---
 

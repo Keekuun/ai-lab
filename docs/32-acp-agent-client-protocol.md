@@ -15,7 +15,7 @@ tags:
 
 > ACP（Agent Client Protocol）解决的是「编辑器如何驱动编程 Agent」的标准化——就像 LSP 之于语言工具：Agent 实现一次，任何 ACP 编辑器都能用；编辑器实现一次，整个 ACP Agent 生态即插即用。
 >
-> **边界：** 本篇管 client↔agent 会话协议。Agent 调工具见 [31 MCP](./31-mcp-and-agent-protocols.md)，agent↔agent 协作是 A2A（不在本仓库范围）。
+> **边界：** 本篇管 client↔agent 会话协议。Agent 调工具见 [31 MCP](./31-mcp-and-agent-protocols.md)，agent↔agent 协作见 [33 A2A](./33-a2a-agent-to-agent-protocol.md)。
 >
 > **配套实验：** [05 ACP Agent](./examples.md#05-acp-agent) — 官方 SDK 实现最小 agent：版本协商、流式 prompt turn、权限请求、取消；内存流对测试，stdio 可被 Zed 直接挂载，`--ollama` 接本地 gemma4。
 

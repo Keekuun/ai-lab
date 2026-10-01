@@ -143,6 +143,7 @@ export default defineConfig({
             { text: '30 可靠性与安全', link: '/30-agent-reliability-and-security' },
             { text: '31 MCP 与协议', link: '/31-mcp-and-agent-protocols' },
             { text: '32 ACP 与编辑器协议', link: '/32-acp-agent-client-protocol' },
+            { text: '33 A2A 与 Agent 互联', link: '/33-a2a-agent-to-agent-protocol' },
           ],
         },
       ],
