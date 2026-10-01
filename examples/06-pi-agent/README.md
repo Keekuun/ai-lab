@@ -20,8 +20,10 @@ pnpm --filter @ai-lab/06-pi-agent start -- --model gemma4:31b
 | `src/ollama-model.ts` | 手搓 `Model<"openai-completions">` 对象指向 Ollama `/v1`；`isOllamaReachable` 探测 |
 | `src/tools.ts` | `calc`（结构化参数，无 eval）与 `get_time`（可注入时钟） |
 | `src/agent.ts` | `createPiAgent`：`new Agent` + `getApiKey` 占位钩子（pi-ai envMap 无 ollama） |
+| `src/session.ts` | `createPiSession`：pi-coding-agent `createAgentSession` 深嵌入（会话持久化/Skills/steer），临时 agentDir + 内存 AuthStorage/ModelRegistry 隔离 |
 | `src/cli.ts` | readline 交互，事件流驱动输出 |
 | `test/agent-loop.test.ts` | mock `streamFn` 剧本式假流：toolUse loop、abort 收尾、事件序列 |
+| `test/session.test.ts` | session 层深嵌入：工具循环、customTools 注册、多轮会话累积 |
 | `test/ollama-integration.test.ts` | 真实 gemma4 工具调用（`describe.skipIf` 保护 CI） |
 
 ## 验收重点
@@ -29,3 +31,4 @@ pnpm --filter @ai-lab/06-pi-agent start -- --model gemma4:31b
 - 工具调用 loop：toolUse → 执行 → toolResult 回传 → 第二轮文本结束
 - abort 契约：streamFn 必须监听 `options.signal` 并推 `error` 事件，否则 prompt 永不 settle
 - 离线可测：`streamFn` 实例钩子注入假流，单测毫秒级、不依赖模型
+- 深嵌入（session 层）额外两坑：凭证校验走 `modelRegistry.getApiKeyAndHeaders`（要 `authStorage.setRuntimeApiKey`，不看 agent 钩子）；mock 时必须 `setCompactionEnabled(false)`（compaction 走真实模型调用，不经 streamFn，假 provider 下挂死）

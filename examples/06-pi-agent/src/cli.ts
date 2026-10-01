@@ -57,7 +57,8 @@ for await (const line of rl) {
   } catch (error) {
     console.error(`[错误] ${error instanceof Error ? error.message : String(error)}`);
   }
-  if (!rl.closed) {
+  // readline Interface 的 closed 不在类型定义里，运行时可查
+  if (!(rl as unknown as { closed: boolean }).closed) {
     rl.prompt();
   }
 }

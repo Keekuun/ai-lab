@@ -70,6 +70,9 @@ await agent.prompt("3+5 等于几？");
 | abort 不生效 | `prompt()` 的 Promise 永不 settle | mock/自定义 streamFn 必须监听 `options.signal` 并推 `error` 事件收尾 |
 | 工具结果精度 | `0.30000000000000004` 进上下文 | 工具内 `Number(value.toFixed(6))` 去浮点噪音 |
 | gemma4 tool calling | 担心兼容层不支持 | 实测 OK：`tool_calls` 正常解析（见 `test/ollama-integration.test.ts`） |
+| session 层凭证校验 | prompt 抛 "Use /login" | session 走 `modelRegistry.getApiKeyAndHeaders`，不看 agent 钩子；需 `authStorage.setRuntimeApiKey("ollama", "ollama")` |
+| 自动 compaction 挂死 | 第二次 prompt 永远 pending | compaction 走 session 自己的模型调用（真实 HTTP），不经 `streamFn`；mock 时 `settingsManager.setCompactionEnabled(false)` |
+| 测试/嵌入污染 | 默认读 `~/.pi/agent` 用户配置 | `agentDir` 传临时目录 + `SessionManager.inMemory()` + `AuthStorage.inMemory()` |
 
 ### 可测试性：mock streamFn
 
@@ -94,15 +97,19 @@ const scriptedStreamFn: StreamFn = () => {
 要会话持久化、Skills、运行模式时，用 pi-coding-agent 的 SDK 入口：
 
 ```ts
-import { createAgentSession, SessionManager } from "@mariozechner/pi-coding-agent";
+import { createAgentSession, SessionManager, AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 
-const session = await createAgentSession({
+const authStorage = AuthStorage.inMemory();
+authStorage.setRuntimeApiKey("ollama", "ollama");   // session 层凭证校验走这里
+const { session } = await createAgentSession({
   model,
-  tools,
+  customTools: tools,
   sessionManager: SessionManager.inMemory(),  // 或落盘 JSONL
   authStorage,
-  modelRegistry,
+  modelRegistry: ModelRegistry.inMemory(authStorage),
+  agentDir: tmpdir,                            // 隔离 ~/.pi/agent 用户配置
 });
+session.settingsManager.setCompactionEnabled(false);  // mock streamFn 时必关
 
 session.subscribe((event) => { /* 同一套事件流 */ });
 await session.prompt("修复 src/index.ts 的类型错误");
